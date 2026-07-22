@@ -1,0 +1,36 @@
+name: MyOfflineMapApp
+options:
+  bundleIdPrefix: com.tyguy5
+packages:
+  MapLibre:
+    url: https://github.com/maplibre/maplibre-gl-native-distribution
+    from: 6.10.0
+  SQLite.swift:
+    url: https://github.com/stephencelis/SQLite.swift
+    from: 0.14.1
+  valhalla-mobile:
+    url: https://github.com/Rallista/valhalla-mobile
+    branch: main
+targets:
+  MyOfflineMapApp:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources: 
+      - path: Sources
+        excludes:
+          - Assets/north-america.pmtiles
+          - Assets/valhalla_tiles.tar
+          - Assets/search_index.db
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        CURRENT_PROJECT_VERSION: "1"
+        MARKETING_VERSION: "1.0"
+    dependencies:
+      - package: MapLibre
+        product: MapLibre
+      - package: SQLite.swift
+        product: SQLite
+      - package: valhalla-mobile
+        product: Valhalla

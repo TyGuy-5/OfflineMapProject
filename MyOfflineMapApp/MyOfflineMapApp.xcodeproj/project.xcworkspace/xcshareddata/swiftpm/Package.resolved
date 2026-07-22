@@ -1,0 +1,60 @@
+{
+  "originHash" : "0dff85708b8c29911a47d71928a9899160c1d93025d7c475df0ae4c9f29a5989",
+  "pins" : [
+    {
+      "identity" : "anycodable",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Flight-School/AnyCodable",
+      "state" : {
+        "revision" : "862808b2070cd908cb04f9aafe7de83d35f81b05",
+        "version" : "0.6.7"
+      }
+    },
+    {
+      "identity" : "light-swift-untar",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/UInt2048/Light-Swift-Untar.git",
+      "state" : {
+        "revision" : "fcff1f1b82373ea64b9565a364f63ffe7fdecf9f",
+        "version" : "1.0.4"
+      }
+    },
+    {
+      "identity" : "maplibre-gl-native-distribution",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/maplibre/maplibre-gl-native-distribution",
+      "state" : {
+        "revision" : "84a79bc375a301169390ac110c868f06c857b83f",
+        "version" : "6.27.0"
+      }
+    },
+    {
+      "identity" : "sqlite.swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/stephencelis/SQLite.swift",
+      "state" : {
+        "revision" : "964c300fb0736699ce945c9edb56ecd62eba27a3",
+        "version" : "0.16.0"
+      }
+    },
+    {
+      "identity" : "valhalla-mobile",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Rallista/valhalla-mobile",
+      "state" : {
+        "branch" : "main",
+        "revision" : "1f1f79685dc8b24d0a701a90d60f3ce72fcad09f"
+      }
+    },
+    {
+      "identity" : "valhalla-openapi-models-swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Rallista/valhalla-openapi-models-swift.git",
+      "state" : {
+        "revision" : "7a69294a4fd6680f72e201adeee81e0855e9a790",
+        "version" : "0.3.0"
+      }
+    }
+  ],
+  "version" : 3
+}
