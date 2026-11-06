@@ -1,5 +1,5 @@
 {
-  "originHash" : "0dff85708b8c29911a47d71928a9899160c1d93025d7c475df0ae4c9f29a5989",
+  "originHash" : "a3ff5d36be9b33bd8ec81eb3ebe35bfe8e23fa4d5909010fc24125b1c0f00516",
   "pins" : [
     {
       "identity" : "anycodable",
@@ -42,7 +42,6 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Rallista/valhalla-mobile",
       "state" : {
-        "branch" : "main",
         "revision" : "1f1f79685dc8b24d0a701a90d60f3ce72fcad09f"
       }
     },

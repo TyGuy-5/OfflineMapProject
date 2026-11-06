@@ -1,32 +1,80 @@
 name: MyOfflineMapApp
 options:
   bundleIdPrefix: com.tyguy5
+  xcodeVersion: "16.0"
+  deploymentTarget:
+    iOS: "17.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.10"
+    SWIFT_STRICT_CONCURRENCY: complete
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    CODE_SIGN_STYLE: Automatic
+    CODE_SIGNING_ALLOWED: YES
+    "CODE_SIGNING_REQUIRED[sdk=iphonesimulator*]": NO
+    "CODE_SIGN_IDENTITY[sdk=iphonesimulator*]": "-"
+
 packages:
   MapLibre:
     url: https://github.com/maplibre/maplibre-gl-native-distribution
-    from: 6.10.0
+    exactVersion: "6.27.0"
   SQLite.swift:
     url: https://github.com/stephencelis/SQLite.swift
-    from: 0.14.1
+    exactVersion: "0.16.0"
   valhalla-mobile:
     url: https://github.com/Rallista/valhalla-mobile
-    branch: main
+    revision: 1f1f79685dc8b24d0a701a90d60f3ce72fcad09f
+  valhalla-models:
+    url: https://github.com/Rallista/valhalla-openapi-models-swift
+    exactVersion: "0.3.0"
+
 targets:
   MyOfflineMapApp:
     type: application
     platform: iOS
     deploymentTarget: "17.0"
-    sources: 
+    sources:
       - path: Sources
+      - path: Resources
         excludes:
-          - Assets/north-america.pmtiles
-          - Assets/valhalla_tiles.tar
-          - Assets/search_index.db
+          - Info.plist
+          - MyOfflineMapApp.entitlements
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
         CURRENT_PROJECT_VERSION: "1"
         MARKETING_VERSION: "1.0"
+        CODE_SIGN_ENTITLEMENTS: Resources/MyOfflineMapApp.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
+        INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.navigation"
+        INFOPLIST_KEY_CFBundleDisplayName: "Offline Maps"
+        INFOPLIST_KEY_UIFileSharingEnabled: YES
+        INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace: YES
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "We need your location for offline routing, speedometer, and map tracking."
+        INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription: "We need continuous background location for uninterrupted offline turn-by-turn navigation and voice guidance when your screen is locked."
+        INFOPLIST_KEY_NSLocationTemporaryUsageDescriptionDictionary:
+          NavigationAccuracy: "We need full GPS accuracy to track your location along roads and deliver turn-by-turn guidance."
+        INFOPLIST_FILE: Resources/Info.plist
+        INFOPLIST_KEY_UIRequiredDeviceCapabilities:
+          - arm64
+          - location-services
+        INFOPLIST_KEY_UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+      configs:
+        Debug:
+          PRODUCT_BUNDLE_IDENTIFIER: com.tyguy5.MyOfflineMapApp.debug
+        Release:
+          PRODUCT_BUNDLE_IDENTIFIER: com.tyguy5.MyOfflineMapApp
     dependencies:
       - package: MapLibre
         product: MapLibre
@@ -34,3 +82,39 @@ targets:
         product: SQLite
       - package: valhalla-mobile
         product: Valhalla
+      - package: valhalla-models
+        product: ValhallaModels
+
+  MyOfflineMapAppTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Tests/MyOfflineMapAppTests
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.tyguy5.MyOfflineMapAppTests
+    dependencies:
+      - target: MyOfflineMapApp
+
+schemes:
+  MyOfflineMapApp:
+    build:
+      targets:
+        MyOfflineMapApp: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - MyOfflineMapAppTests
+
+  MyOfflineMapAppTests:
+    build:
+      targets:
+        MyOfflineMapAppTests: all
+    test:
+      config: Debug
+      targets:
+        - MyOfflineMapAppTests

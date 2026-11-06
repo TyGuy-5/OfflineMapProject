@@ -1,23 +1,16 @@
 {
   "logging": {
     "type": "std_out",
-    "color": true,
-    "file_name": "path_to_some_file.log"
+    "color": false
   },
   "mjolnir": {
-    "max_cache_size": 1000000000,
-    "id_table_size": 1300000000,
+    "max_cache_size": 33554432,
+    "id_table_size": 20000000,
     "use_lru_mem_cache": false,
     "lru_mem_cache_hard_control": false,
     "use_simple_mem_cache": false,
-    "tile_dir": "/custom_files/valhalla_tiles",
-    "tile_extract": "/custom_files/valhalla_tiles.tar",
-    "traffic_extract": "/data/valhalla/traffic.tar",
-    "admin": "/custom_files/valhalla_tiles/admins.sqlite",
-    "landmarks": "/data/valhalla/landmarks.sqlite",
-    "timezone": "/custom_files/valhalla_tiles/timezones.sqlite",
-    "transit_dir": "/data/valhalla/transit",
-    "transit_feeds_dir": "/data/valhalla/transit_feeds",
+    "tile_dir": "valhalla_tiles",
+    "tile_extract": "alaska_tiles.tar",
     "transit_pbf_limit": 20000,
     "hierarchy": true,
     "shortcuts": true,
@@ -38,18 +31,16 @@
       "infer_turn_channels": true,
       "apply_country_overrides": true,
       "grid_divisions_within_tile": 32,
-      "use_admin_db": true,
+      "use_admin_db": false,
       "use_direction_on_ways": false,
       "allow_alt_name": false,
       "use_urban_tag": false,
       "use_rest_area": false,
-      "scan_tar": false,
+      "scan_tar": true,
       "build_bounding_circles": true
     }
   },
-  "additional_data": {
-    "elevation": "/data/valhalla/elevation/"
-  },
+  "additional_data": {},
   "loki": {
     "actions": [
       "locate",
@@ -66,13 +57,13 @@
       "status",
       "tile"
     ],
-    "use_connectivity": true,
+    "use_connectivity": false,
     "service_defaults": {
-      "radius": 0,
-      "minimum_reachability": 50,
-      "search_cutoff": 35000,
-      "node_snap_tolerance": 5,
-      "street_side_tolerance": 5,
+      "radius": 500,
+      "minimum_reachability": 0,
+      "search_cutoff": 100000,
+      "node_snap_tolerance": 25,
+      "street_side_tolerance": 25,
       "street_side_max_distance": 1000,
       "heading_tolerance": 60,
       "mvt_min_zoom_road_class": [
@@ -87,21 +78,15 @@
       ],
       "mvt_cache_min_zoom": 11,
       "mvt_max_age": "1800"
-    },
-    "service": {
-      "proxy": "ipc:///tmp/loki"
     }
   },
   "thor": {
     "source_to_target_algorithm": "select_optimal",
-    "service": {
-      "proxy": "ipc:///tmp/thor"
-    },
-    "max_reserved_labels_count_astar": 2000000,
-    "max_reserved_labels_count_bidir_astar": 1000000,
-    "max_reserved_labels_count_dijkstras": 4000000,
-    "max_reserved_labels_count_bidir_dijkstras": 2000000,
-    "clear_reserved_memory": false,
+    "max_reserved_labels_count_astar": 250000,
+    "max_reserved_labels_count_bidir_astar": 150000,
+    "max_reserved_labels_count_dijkstras": 250000,
+    "max_reserved_labels_count_bidir_dijkstras": 150000,
+    "clear_reserved_memory": true,
     "extended_search": false,
     "costmatrix": {
       "check_reverse_connection": true,
@@ -152,9 +137,6 @@
     }
   },
   "odin": {
-    "service": {
-      "proxy": "ipc:///tmp/odin"
-    },
     "markup_formatter": {
       "markup_enabled": false,
       "phoneme_format": "<TEXTUAL_STRING> (<span class=<QUOTES>phoneme<QUOTES>>/<VERBAL_STRING>/</span>)"
@@ -202,39 +184,26 @@
     "multimodal": {
       "turn_penalty_factor": 70
     },
-    "service": {
-      "proxy": "ipc:///tmp/meili"
-    },
     "grid": {
       "size": 500,
-      "cache_size": 100240
-    }
-  },
-  "httpd": {
-    "service": {
-      "listen": "tcp://*:8002",
-      "loopback": "ipc:///tmp/loopback",
-      "interrupt": "ipc:///tmp/interrupt",
-      "drain_seconds": 28,
-      "shutdown_seconds": 1,
-      "timeout_seconds": -1
+      "cache_size": 25000
     }
   },
   "service_limits": {
     "auto": {
-      "max_distance": 5000000.0,
+      "max_distance": 1000000.0,
       "max_locations": 20,
       "max_matrix_distance": 400000.0,
       "max_matrix_location_pairs": 2500
     },
     "bus": {
-      "max_distance": 5000000.0,
+      "max_distance": 1000000.0,
       "max_locations": 50,
       "max_matrix_distance": 400000.0,
       "max_matrix_location_pairs": 2500
     },
     "taxi": {
-      "max_distance": 5000000.0,
+      "max_distance": 1000000.0,
       "max_locations": 20,
       "max_matrix_distance": 400000.0,
       "max_matrix_location_pairs": 2500
@@ -244,6 +213,8 @@
       "max_locations": 50,
       "max_matrix_distance": 200000.0,
       "max_matrix_location_pairs": 2500,
+      "min_transit_walking_distance": 1,
+      "max_transit_walking_distance": 10000,
       "min_multimodal_walking_distance": 1,
       "max_multimodal_walking_distance": 10000
     },
@@ -281,7 +252,7 @@
       "max_matrix_location_pairs": 2500
     },
     "truck": {
-      "max_distance": 5000000.0,
+      "max_distance": 1000000.0,
       "max_locations": 20,
       "max_matrix_distance": 400000.0,
       "max_matrix_location_pairs": 2500
@@ -312,7 +283,8 @@
       "max_matrix_location_pairs": 2500
     },
     "auto_pedestrian": {
-      "max_distance": 5000000.0,
+      "max_distance": 1000000.0,
+      "max_locations": 50,
       "max_matrix_distance": 400000.0,
       "max_matrix_location_pairs": 2500
     },
@@ -367,10 +339,5 @@
       }
     },
     "allow_hard_exclusions": false
-  },
-  "statsd": {
-    "port": 8125,
-    "prefix": "valhalla",
-    "batch_size": 500
   }
 }

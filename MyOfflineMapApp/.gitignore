@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+._*
+
+# Xcode User Data & State
+xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcuserstate
+*.xcbkptlist
+DerivedData/
+build/
+
+# Offline Archives
+*.pmtiles
+*.tar
+*.db
