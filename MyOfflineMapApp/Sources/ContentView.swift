@@ -1028,16 +1028,18 @@ struct ContentView: View {
         // 1. Calculate remaining step distance (monotonically counting down)
         let currentStep: NavigationStep? = (currentStepIndex < details.steps.count) ? details.steps[currentStepIndex] : details.steps.last
         if let currentStep = currentStep {
-            let stepEnd = min(currentStep.endIndex, coords.count - 1)
+            let stepEnd = max(0, min(currentStep.endIndex, coords.count - 1))
             var stepDistMeters = 0.0
-            if clampedIndex < stepEnd {
+            if clampedIndex < stepEnd && clampedIndex + 1 < coords.count {
                 stepDistMeters += segmentDistanceMeters(p1: userCoord, p2: coords[clampedIndex + 1])
                 if clampedIndex + 1 < stepEnd {
                     for i in (clampedIndex + 1)..<stepEnd {
-                        stepDistMeters += segmentDistanceMeters(p1: coords[i], p2: coords[i + 1])
+                        if i + 1 < coords.count {
+                            stepDistMeters += segmentDistanceMeters(p1: coords[i], p2: coords[i + 1])
+                        }
                     }
                 }
-            } else {
+            } else if stepEnd < coords.count {
                 stepDistMeters = segmentDistanceMeters(p1: userCoord, p2: coords[stepEnd])
             }
             self.remainingStepDistanceMiles = max(0.0, stepDistMeters * 0.000621371)
@@ -1281,7 +1283,7 @@ struct ContentView: View {
         }
     }
 
-    private func advanceSimulationStep() {
+    func advanceSimulationStep() {
         guard let details = routeDetails, !details.coordinates.isEmpty else { return }
         let coords = details.coordinates
         guard currentCoordIndex < coords.count - 1 else {
@@ -1310,14 +1312,14 @@ struct ContentView: View {
         simulatedUserCoordinate = p2
         currentCoordIndex = nextIndex
 
-        if currentStepIndex < details.steps.count - 1 {
+        if !details.steps.isEmpty && currentStepIndex < details.steps.count - 1 {
             let nextStep = details.steps[currentStepIndex + 1]
             if currentCoordIndex >= nextStep.startIndex {
                 currentStepIndex += 1
                 hasAnnouncedAdvanceTurn = false
                 routingService.speakTurnInstruction(nextStep.instruction, stepId: currentStepIndex * 10 + 2)
             } else if !hasAnnouncedAdvanceTurn {
-                let turnCoord = coords[min(nextStep.startIndex, coords.count - 1)]
+                let turnCoord = coords[max(0, min(nextStep.startIndex, coords.count - 1))]
                 let distToTurn = segmentDistanceMeters(p1: p2, p2: turnCoord)
                 if distToTurn < 250.0 {
                     hasAnnouncedAdvanceTurn = true
@@ -1343,6 +1345,8 @@ struct ContentView: View {
         simulatedUserCoordinate = nil
         simulatedHeading = nil
         simulatedSpeedMph = 0
+        currentStepIndex = 0
+        currentCoordIndex = 0
         locationManager.setNavigationActive(false)
         appMode = routeDetails != nil ? .routePreview : .explore
     }
@@ -1549,8 +1553,4 @@ struct DashboardGauge: View {
         .shadow(color: Color.black.opacity(0.12), radius: 3)
     }
 }
-
-// MARK: - Concurrency Conformances
-extension NavigationStep: @unchecked Sendable {}
-extension RouteDetails: @unchecked Sendable {}
 

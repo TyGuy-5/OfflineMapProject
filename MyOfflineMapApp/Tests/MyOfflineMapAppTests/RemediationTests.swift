@@ -1283,6 +1283,215 @@ final class RemediationTests: XCTestCase {
         let elapsed = CFAbsoluteTimeGetCurrent() - startTime
         XCTAssertTrue(elapsed < 25.0, "High concurrency 30-task burst must complete without thread pool starvation (took \(elapsed)s)")
     }
+
+    // MARK: - 18. Simulation step progression bounds safety (Issue #1 / C-1)
+    func test18_SimulationStepProgressionBoundsSafety() {
+        var view = ContentView()
+        let coord1 = CLLocationCoordinate2D(latitude: 64.8436, longitude: -147.7215)
+        let coord2 = CLLocationCoordinate2D(latitude: 64.8440, longitude: -147.7210)
+        let coord3 = CLLocationCoordinate2D(latitude: 64.8445, longitude: -147.7205)
+
+        // Case A: 0 steps in route details during simulation step
+        let zeroStepsRoute = RouteDetails(
+            coordinates: [coord1, coord2, coord3],
+            totalDistanceMiles: 0.15,
+            totalDurationSeconds: 45,
+            steps: [],
+            costing: "auto"
+        )
+        view.routeDetails = zeroStepsRoute
+        view.isNavigating = true
+        view.isSimulating = true
+        view.currentCoordIndex = 0
+        view.currentStepIndex = 0
+
+        // Must execute cleanly without bounds crash when steps array is empty
+        view.advanceSimulationStep()
+        XCTAssertEqual(view.currentStepIndex, 0)
+
+        // Case B: Step with negative or out-of-range startIndex
+        let malformedStep1 = NavigationStep(
+            instruction: "Drive north",
+            distanceMiles: 0.1,
+            durationSeconds: 20,
+            maneuverType: 1,
+            streetName: "Cushman",
+            startIndex: -5,
+            endIndex: 1
+        )
+        let malformedStep2 = NavigationStep(
+            instruction: "Turn right",
+            distanceMiles: 0.05,
+            durationSeconds: 25,
+            maneuverType: 2,
+            streetName: "1st Ave",
+            startIndex: -2,
+            endIndex: 2
+        )
+        let malformedRoute = RouteDetails(
+            coordinates: [coord1, coord2, coord3],
+            totalDistanceMiles: 0.15,
+            totalDurationSeconds: 45,
+            steps: [malformedStep1, malformedStep2],
+            costing: "auto"
+        )
+        view.routeDetails = malformedRoute
+        view.currentCoordIndex = 0
+        view.currentStepIndex = 0
+
+        // Must handle negative step indices with max(0, min(...)) clamping without crashing
+        view.advanceSimulationStep()
+        XCTAssertTrue(view.currentCoordIndex >= 0)
+    }
+
+    // MARK: - 19. Telemetry out-of-bounds edge cases (Issue #2 / C-2)
+    func test19_TelemetryOutOfBoundsEdgeCases() {
+        var view = ContentView()
+        let coord1 = CLLocationCoordinate2D(latitude: 64.8436, longitude: -147.7215)
+        let coord2 = CLLocationCoordinate2D(latitude: 64.8440, longitude: -147.7210)
+        let coord3 = CLLocationCoordinate2D(latitude: 64.8445, longitude: -147.7205)
+
+        // Step with negative endIndex (e.g. -1 or -5)
+        let negativeEndStep = NavigationStep(
+            instruction: "Proceed",
+            distanceMiles: 0.1,
+            durationSeconds: 20,
+            maneuverType: 1,
+            streetName: nil,
+            startIndex: 0,
+            endIndex: -5
+        )
+        let routeWithNegativeEnd = RouteDetails(
+            coordinates: [coord1, coord2, coord3],
+            totalDistanceMiles: 0.15,
+            totalDurationSeconds: 45,
+            steps: [negativeEndStep],
+            costing: "auto"
+        )
+        view.routeDetails = routeWithNegativeEnd
+
+        // In unpatched code, clampedIndex >= stepEnd (-5) causes coords[stepEnd] -> coords[-5] crash
+        // In patched code, stepEnd is clamped to max(0, min(currentStep.endIndex, coords.count - 1))
+        view.updateNavigationTelemetry(at: coord1, coordIndex: 0, in: routeWithNegativeEnd)
+        XCTAssertEqual(view.remainingStepDistanceMiles, 0.0, accuracy: 0.001)
+
+        // Step with extreme endIndex far beyond coordinates count (e.g. 9999)
+        let oversizedEndStep = NavigationStep(
+            instruction: "Proceed",
+            distanceMiles: 0.1,
+            durationSeconds: 20,
+            maneuverType: 1,
+            streetName: nil,
+            startIndex: 0,
+            endIndex: 9999
+        )
+        let routeWithOversizedEnd = RouteDetails(
+            coordinates: [coord1, coord2, coord3],
+            totalDistanceMiles: 0.15,
+            totalDurationSeconds: 45,
+            steps: [oversizedEndStep],
+            costing: "auto"
+        )
+        view.routeDetails = routeWithOversizedEnd
+        view.updateNavigationTelemetry(at: coord1, coordIndex: 1, in: routeWithOversizedEnd)
+        XCTAssertTrue(view.remainingStepDistanceMiles >= 0.0)
+
+        // Extreme coordIndex values (-100, 100)
+        view.updateNavigationTelemetry(at: coord1, coordIndex: -100, in: routeWithOversizedEnd)
+        view.updateNavigationTelemetry(at: coord1, coordIndex: 100, in: routeWithOversizedEnd)
+        XCTAssertFalse(view.formattedRemainingDuration.isEmpty)
+    }
+
+    // MARK: - 20. Sendable conformance integrity (Issue #3 / C-3)
+    func test20_SendableConformanceIntegrity() async {
+        let step = NavigationStep(
+            instruction: "Turn right on Airport Way",
+            distanceMiles: 1.5,
+            durationSeconds: 120,
+            maneuverType: 10,
+            streetName: "Airport Way",
+            startIndex: 0,
+            endIndex: 5
+        )
+
+        // 20.1 NavigationStep explicitly conforms to Sendable
+        let stepSendable: any Sendable = step
+        XCTAssertNotNil(stepSendable)
+
+        let stepTask = Task.detached { () -> NavigationStep in
+            return step
+        }
+        let receivedStep = await stepTask.value
+        XCTAssertEqual(receivedStep.instruction, "Turn right on Airport Way")
+        XCTAssertEqual(receivedStep.maneuverType, 10)
+
+        // 20.2 RouteDetails conforms to Sendable directly at definition
+        let details = RouteDetails(
+            coordinates: [
+                CLLocationCoordinate2D(latitude: 64.84, longitude: -147.72),
+                CLLocationCoordinate2D(latitude: 64.85, longitude: -147.71)
+            ],
+            totalDistanceMiles: 1.5,
+            totalDurationSeconds: 120,
+            steps: [step],
+            costing: "auto"
+        )
+        let detailsSendable: any Sendable = details
+        XCTAssertNotNil(detailsSendable)
+
+        let detailsTask = Task.detached { () -> RouteDetails in
+            return details
+        }
+        let receivedDetails = await detailsTask.value
+        XCTAssertEqual(receivedDetails.totalDistanceMiles, 1.5)
+        XCTAssertEqual(receivedDetails.coordinates.count, 2)
+    }
+
+    // MARK: - 21. Valhalla metric distance conversion consistency (Issue #4 / H-1)
+    func test21_ValhallaMetricDistanceConversionConsistency() {
+        // Valhalla km to miles conversion factor must exactly invert formatters (* 1.60934)
+        let valhallaKm = 10.0
+        let conversionDivisor = 1.60934
+        let storedMiles = valhallaKm / conversionDivisor
+
+        let step = NavigationStep(
+            instruction: "Drive 10km",
+            distanceMiles: storedMiles,
+            durationSeconds: 600,
+            maneuverType: 1,
+            streetName: "Highway 3",
+            startIndex: 0,
+            endIndex: 10
+        )
+        let details = RouteDetails(
+            coordinates: [
+                CLLocationCoordinate2D(latitude: 64.84, longitude: -147.72),
+                CLLocationCoordinate2D(latitude: 64.85, longitude: -147.71)
+            ],
+            totalDistanceMiles: storedMiles,
+            totalDurationSeconds: 600,
+            steps: [step],
+            costing: "auto"
+        )
+
+        // Verify that formatting back to metric reproduces exact 10.0 km without drift
+        XCTAssertEqual(details.formattedDistance(useMetric: true), "10.0 km")
+        XCTAssertEqual(step.formattedDistance(useMetric: true), "10.0 km")
+
+        // Short distance metric formatting (meters)
+        let shortKm = 0.5 // 500 meters
+        let shortMiles = shortKm / conversionDivisor
+        let shortStep = NavigationStep(
+            instruction: "Drive 500m",
+            distanceMiles: shortMiles,
+            durationSeconds: 30,
+            maneuverType: 1,
+            streetName: "Cushman",
+            startIndex: 0,
+            endIndex: 2
+        )
+        XCTAssertEqual(shortStep.formattedDistance(useMetric: true), "500 m")
+    }
 }
 
 

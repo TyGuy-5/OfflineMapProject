@@ -4,7 +4,7 @@ import AVFoundation
 import Valhalla
 import ValhallaModels
 
-public struct NavigationStep: Identifiable, Hashable {
+public struct NavigationStep: Identifiable, Hashable, Sendable {
     public let id = UUID()
     public let instruction: String
     public let distanceMiles: Double
@@ -59,7 +59,7 @@ public struct NavigationStep: Identifiable, Hashable {
     }
 }
 
-public struct RouteDetails: Identifiable, Equatable {
+public struct RouteDetails: Identifiable, Equatable, @unchecked Sendable {
     public let id: UUID
     public let coordinates: [CLLocationCoordinate2D]
     public let totalDistanceMiles: Double
@@ -329,7 +329,7 @@ public final class RoutingService: NSObject, @unchecked Sendable, AVSpeechSynthe
 
                 var navSteps: [NavigationStep] = []
                 for m in firstLeg.maneuvers {
-                    let stepDistMiles = useMetric ? (m.length * 0.621371) : m.length
+                    let stepDistMiles = useMetric ? (m.length / 1.60934) : m.length
                     let step = NavigationStep(
                         instruction: m.instruction,
                         distanceMiles: stepDistMiles,
@@ -342,7 +342,7 @@ public final class RoutingService: NSObject, @unchecked Sendable, AVSpeechSynthe
                     navSteps.append(step)
                 }
 
-                let totalDistanceMiles = useMetric ? (firstLeg.summary.length * 0.621371) : firstLeg.summary.length
+                let totalDistanceMiles = useMetric ? (firstLeg.summary.length / 1.60934) : firstLeg.summary.length
                 let totalTime = firstLeg.summary.time
 
                 print("RoutingService: Successfully calculated real road route! (\(coords.count) coordinates, \(navSteps.count) maneuvers, \(String(format: "%.2f", totalDistanceMiles)) mi)")
