@@ -2,7 +2,7 @@
 
 A high-performance, 100% offline navigation and mapping application for iOS modeled after Google Maps. Powered by MapLibre Native, Valhalla C++ routing engine, and SQLite FTS5 geocoding.
 
-For comprehensive technical architecture, full file-by-file references, complete version history, and engineering deep dives, see [DOCUMENTATION.md](DOCUMENTATION.md).
+For comprehensive technical architecture, full file-by-file references, complete version history, and engineering deep dives, see [DOCUMENTATION.md](DOCUMENTATION.md). For audit and verification reports, see [docs/AUDIT_REPORT.md](docs/AUDIT_REPORT.md).
 
 ## Features Modeled After Google Maps
 - **Floating Pill Search Bar**: Autocomplete search with diacritic and tokenized prefix matching against local offline database.
@@ -22,8 +22,13 @@ OfflineMapProject/
 ├── LICENSE
 ├── README.md
 ├── DOCUMENTATION.md               # Complete architecture, file reference & history
-├── .gitignore
+├── THIRD_PARTY_NOTICES.md         # Open source attributions & licenses
+├── .gitignore                     # Repository git ignore configuration
+├── .gitattributes                 # Git LFS configuration for large binaries
+├── docs/                          # Architecture & verification documentation
+│   └── AUDIT_REPORT.md            # Comprehensive audit & regression review report
 ├── data/                          # Offline data assets & extracts
+│   ├── README.md                  # Data layout & runtime resolution guide
 │   ├── alaska_tiles.tar           # Regional binned & indexed Valhalla tiles
 │   ├── north-america.pmtiles      # Offline vector tile archive (MapLibre)
 │   ├── search_index.db            # Offline SQLite FTS5 geocoding index
@@ -31,7 +36,8 @@ OfflineMapProject/
 │   ├── valhalla_tiles.tar         # Full continental Valhalla archive
 │   └── sources/                   # Natural Earth and shoreline polygons
 ├── tools/                         # Tile generation & pipeline utilities
-│   └── planetiler.jar             # OpenMapTiles PMTiles generator
+│   ├── README.md                  # Tool documentation & usage guide
+│   └── planetiler.jar             # OpenMapTiles PMTiles generator (Git LFS)
 └── MyOfflineMapApp/               # iOS Swift Application
     ├── project.yml                # XcodeGen project specification
     ├── MyOfflineMapApp.xcodeproj/ # Xcode project & shared schemes

@@ -377,7 +377,7 @@ The application is structured into decoupled functional layers communicating thr
   - RoutingService.swift: Added activeSpeechGeneration tracking under voiceLock and re-verified main-queue isSpeaking before calling AVAudioSession setActive(false), eliminating audio prompt cutoff races.
   - project.yml & Info.plist: Added INFOPLIST_KEY_NSLocationTemporaryUsageDescriptionDictionary with NavigationAccuracy purpose key; removed unused ValhallaConfigModels framework dependency.
   - RemediationTests.swift: Authored 29 dedicated unit and adversarial stress tests covering all 17 remediated bugs and edge conditions.
-  - AUDIT_REPORT.md: Generated comprehensive audit and regression review report documenting all 17 remediations, git diffs, and verification outcomes.
+  - docs/AUDIT_REPORT.md: Generated comprehensive audit and regression review report documenting all 17 remediations, git diffs, and verification outcomes.
 
 ---
 

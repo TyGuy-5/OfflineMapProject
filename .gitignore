@@ -1,1 +1,55 @@
-data/
+# ==============================================================================
+# OfflineMapProject - Root .gitignore
+# ==============================================================================
+
+# macOS System Files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Xcode & Swift
+xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcuserstate
+*.xcbkptlist
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+DerivedData/
+build/
+*.ipa
+*.dSYM.zip
+*.dSYM
+.build/
+.swiftpm/xcode/
+
+# Fastlane / CocoaPods / Carthage
+Pods/
+Carthage/Build/
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# Offline Large Data Assets
+# Preserve directory structure and docs while ignoring multi-gigabyte data files
+data/*
+!data/.gitkeep
+!data/README.md
+*.pmtiles
+*.tar
+*.db
+*.sqlite
+*.zip
+*.tsv.gz
+
+# Editor & Temporary Files
+.vscode/
+.idea/
+*.swp
+*~
+*.orig
+*.bak
