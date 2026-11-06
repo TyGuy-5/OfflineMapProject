@@ -264,7 +264,7 @@ public final class SearchService: @unchecked Sendable, ObservableObject {
         let lonMin = coordinate.longitude - 0.008
         let lonMax = coordinate.longitude + 0.008
 
-        let sql = "SELECT rowid, name, lat, lon FROM geocoder WHERE CAST(lat AS REAL) BETWEEN ? AND ? AND CAST(lon AS REAL) BETWEEN ? AND ? LIMIT 5;"
+        let sql = "SELECT rowid, name, lat, lon FROM geocoder WHERE CAST(lat AS REAL) BETWEEN ? AND ? AND CAST(lon AS REAL) BETWEEN ? AND ? LIMIT 250;"
 
         final class ProgressBox {
             var ticks = 0

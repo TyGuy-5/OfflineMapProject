@@ -47,6 +47,7 @@ struct ContentView: View {
     @State private var isVoiceMuted = false
     @State var isProgrammaticTextChange = false
     @State private var isRecalculating = false
+    @State private var consecutiveRerouteFailures = 0
     @State private var lastRerouteTime = Date.distantPast
     @State private var activeRouteRequestId: UUID? = nil
     @State var remainingStepDistanceMiles: Double = 0.0
@@ -937,10 +938,11 @@ struct ContentView: View {
         // Step progression along route maneuvers & live countdown telemetry
         updateCurrentStepForLiveLocation(location.coordinate, in: details)
 
-        // Off-route check with in-progress guard and cooldown
+        // Off-route check with in-progress guard and exponential backoff on failures
         guard !isRecalculating else { return }
         let now = Date()
-        guard now.timeIntervalSince(lastRerouteTime) > 7.0 else { return }
+        let cooldown = 7.0 * pow(2.0, Double(min(consecutiveRerouteFailures, 4)))
+        guard now.timeIntervalSince(lastRerouteTime) > cooldown else { return }
 
         // Scale threshold by horizontal accuracy (at least 40m, up to 75m in urban canyons)
         let baseThreshold = 40.0
@@ -971,6 +973,8 @@ struct ContentView: View {
             let isNearEnd = currentCoordIndex >= max(0, coords.count - 3) || (!details.steps.isEmpty && currentStepIndex >= details.steps.count - 1)
             if distToFinalDest < 25.0 || (isNearEnd && distToFinalDest < 40.0) {
                 routingService.speakTurnInstruction("You have arrived at your destination.", force: true)
+                routeDetails = nil
+                routeCoordinates = nil
                 endNavigation()
                 return
             }
@@ -993,13 +997,13 @@ struct ContentView: View {
             currentCoordIndex = closestIndex
         }
 
-        // Step progression along maneuvers
+        // Step progression along maneuvers (includes coordinate index fallback for high-speed travel)
         if !details.steps.isEmpty && currentStepIndex < details.steps.count {
             let currentStep = details.steps[currentStepIndex]
             let endCoord = coords[min(currentStep.endIndex, coords.count - 1)]
             let distToEndMeters = segmentDistanceMeters(p1: userCoord, p2: endCoord)
 
-            if distToEndMeters < 35.0 && currentStepIndex < details.steps.count - 1 {
+            if (distToEndMeters < 35.0 || currentCoordIndex >= currentStep.endIndex) && currentStepIndex < details.steps.count - 1 {
                 currentStepIndex += 1
                 hasAnnouncedAdvanceTurn = false
                 currentCoordIndex = max(currentCoordIndex, currentStep.endIndex)
@@ -1089,6 +1093,7 @@ struct ContentView: View {
                 defer { self.isRecalculating = false }
                 guard self.isNavigating && self.activeRouteRequestId == reqId else { return }
                 if let details = details, !details.coordinates.isEmpty {
+                    self.consecutiveRerouteFailures = 0
                     self.routeDetails = details
                     self.routeCoordinates = details.coordinates
                     self.currentStepIndex = 0
@@ -1102,8 +1107,11 @@ struct ContentView: View {
                         self.routingService.speakTurnInstruction(first.instruction, stepId: 0, force: true)
                     }
                 } else {
-                    self.errorMessage = "Rerouting failed: Current location or destination is outside offline road network."
-                    self.showErrorAlert = true
+                    self.consecutiveRerouteFailures += 1
+                    if self.consecutiveRerouteFailures == 1 {
+                        self.errorMessage = "Rerouting failed: Current location or destination is outside offline road network."
+                        self.showErrorAlert = true
+                    }
                 }
             }
         }
@@ -1120,7 +1128,7 @@ struct ContentView: View {
         let searcher = searchService
 
         Task.detached(priority: .userInitiated) {
-            if let resolved = searcher.reverseGeocode(coordinate: coordinate) {
+            if let resolved = await searcher.reverseGeocodeAsync(coordinate: coordinate) {
                 await MainActor.run {
                     if self.selectedCoordinate?.latitude == coordinate.latitude &&
                        self.selectedCoordinate?.longitude == coordinate.longitude {
@@ -1157,7 +1165,7 @@ struct ContentView: View {
             searchTask = Task.detached(priority: .userInitiated) {
                 try? await Task.sleep(nanoseconds: 180_000_000)
                 if Task.isCancelled { return }
-                let results = searcher.search(query: trimmed, userLocation: userLoc)
+                let results = await searcher.searchAsync(query: trimmed, userLocation: userLoc)
                 if !Task.isCancelled {
                     await MainActor.run {
                         self.searchResults = results
@@ -1278,6 +1286,8 @@ struct ContentView: View {
         let coords = details.coordinates
         guard currentCoordIndex < coords.count - 1 else {
             routingService.speakTurnInstruction("You have arrived at your destination.", force: true)
+            routeDetails = nil
+            routeCoordinates = nil
             endNavigation()
             return
         }
@@ -1323,6 +1333,7 @@ struct ContentView: View {
     private func endNavigation() {
         activeRouteRequestId = nil
         isRecalculating = false
+        consecutiveRerouteFailures = 0
         routingService.stopVoice()
         simulationTimer?.invalidate()
         simulationTimer = nil

@@ -149,11 +149,13 @@ public final class RoutingService: NSObject, @unchecked Sendable, AVSpeechSynthe
     private var lastSpokenStepId: Int? = nil
     private var lastSpokenTime: Date = Date.distantPast
     private var activeSpeechGeneration: Int = 0
+    private var utteranceGenerations: [ObjectIdentifier: Int] = [:]
     private let voiceLock = NSLock()
 
     public func stopVoice() {
         voiceLock.lock()
         activeSpeechGeneration += 1
+        utteranceGenerations.removeAll()
         voiceLock.unlock()
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
@@ -462,8 +464,13 @@ public final class RoutingService: NSObject, @unchecked Sendable, AVSpeechSynthe
 
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            guard !self.isVoiceMuted else { return }
-            if force {
+            self.voiceLock.lock()
+            let currentGen = self.activeSpeechGeneration
+            self.voiceLock.unlock()
+
+            guard generation == currentGen, !self.isVoiceMuted else { return }
+
+            if force || self.speechSynthesizer.isSpeaking {
                 self.speechSynthesizer.stopSpeaking(at: .immediate)
             }
             try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .voicePrompt, options: [.duckOthers])
@@ -472,6 +479,11 @@ public final class RoutingService: NSObject, @unchecked Sendable, AVSpeechSynthe
             let utterance = AVSpeechUtterance(string: text)
             utterance.rate = AVSpeechUtteranceDefaultSpeechRate
             utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
+
+            self.voiceLock.lock()
+            self.utteranceGenerations[ObjectIdentifier(utterance)] = generation
+            self.voiceLock.unlock()
+
             self.speechSynthesizer.speak(utterance)
         }
     }
@@ -479,7 +491,7 @@ public final class RoutingService: NSObject, @unchecked Sendable, AVSpeechSynthe
     // AVSpeechSynthesizerDelegate: Deactivate audio session to restore background music / media volume
     public func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
         voiceLock.lock()
-        let generation = activeSpeechGeneration
+        let generation = utteranceGenerations.removeValue(forKey: ObjectIdentifier(utterance)) ?? activeSpeechGeneration
         voiceLock.unlock()
 
         DispatchQueue.main.async { [weak self] in
@@ -498,7 +510,7 @@ public final class RoutingService: NSObject, @unchecked Sendable, AVSpeechSynthe
 
     public func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
         voiceLock.lock()
-        let generation = activeSpeechGeneration
+        let generation = utteranceGenerations.removeValue(forKey: ObjectIdentifier(utterance)) ?? activeSpeechGeneration
         voiceLock.unlock()
 
         DispatchQueue.main.async { [weak self] in

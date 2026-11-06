@@ -223,19 +223,27 @@ public struct MapView: UIViewRepresentable {
                 ]
                 json["sources"] = sources
 
-                // Check for locally bundled font glyphs without percent-encoding braces
+                // Check for locally bundled font glyphs without percent-encoding braces or path spaces
                 let fontsURL = OfflineDataManager.url(for: "fonts")
                 if FileManager.default.fileExists(atPath: fontsURL.path) {
-                    let base = fontsURL.absoluteString.hasSuffix("/") ? fontsURL.absoluteString : fontsURL.absoluteString + "/"
+                    let fontsSymlink = FileManager.default.temporaryDirectory.appendingPathComponent("offline_fonts")
+                    try? FileManager.default.removeItem(at: fontsSymlink)
+                    try? FileManager.default.createSymbolicLink(at: fontsSymlink, withDestinationURL: fontsURL)
+                    let base = fontsSymlink.absoluteString.hasSuffix("/") ? fontsSymlink.absoluteString : fontsSymlink.absoluteString + "/"
                     json["glyphs"] = "\(base){fontstack}/{range}.pbf"
                 } else {
                     json.removeValue(forKey: "glyphs")
                 }
 
-                // Check for locally bundled sprites
+                // Check for locally bundled sprites across all supported extensions (.json, @2x.json, .png, @2x.png)
                 let spriteURL = OfflineDataManager.url(for: "sprites/sprite")
-                if FileManager.default.fileExists(atPath: spriteURL.path + ".json") {
-                    json["sprite"] = spriteURL.absoluteString
+                if OfflineDataManager.assetExists(at: spriteURL) {
+                    let spritesDirURL = spriteURL.deletingLastPathComponent()
+                    let spritesSymlinkDir = FileManager.default.temporaryDirectory.appendingPathComponent("offline_sprites")
+                    try? FileManager.default.removeItem(at: spritesSymlinkDir)
+                    try? FileManager.default.createSymbolicLink(at: spritesSymlinkDir, withDestinationURL: spritesDirURL)
+                    let spritePrefixURL = spritesSymlinkDir.appendingPathComponent(spriteURL.lastPathComponent)
+                    json["sprite"] = spritePrefixURL.absoluteString
                 } else {
                     json.removeValue(forKey: "sprite")
                 }

@@ -26,7 +26,7 @@ private final class CacheStorage: @unchecked Sendable {
 public struct OfflineDataManager {
     private static let cache = CacheStorage()
 
-    private static func assetExists(at url: URL) -> Bool {
+    public static func assetExists(at url: URL) -> Bool {
         let path = url.path
         if FileManager.default.fileExists(atPath: path) {
             return true
@@ -63,7 +63,10 @@ public struct OfflineDataManager {
     /// Resolves the URL for an offline data asset across external storage, Application Support, Documents, and App Bundle
     public static func url(for filename: String) -> URL {
         if let cached = cache.get(filename) {
-            return cached
+            if assetExists(at: cached) {
+                return cached
+            }
+            cache.remove(filename)
         }
 
         let resolvedURL: URL = {
