@@ -560,7 +560,8 @@ struct ContentView: View {
     private var searchResultsDropdown: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
-                ForEach(searchResults) { result in
+                ForEach(searchResults.indices, id: \.self) { index in
+                    let result = searchResults[index]
                     Button(action: {
                         selectPlace(result)
                     }) {
@@ -581,7 +582,7 @@ struct ContentView: View {
                             Spacer()
                             Image(systemName: "chevron.right")
                                 .font(.caption2)
-                                .foregroundColor(.tertiaryLabel)
+                                .foregroundColor(Color(.tertiaryLabel))
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
