@@ -103,6 +103,10 @@ public struct OfflineDataManager {
             if let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
                 let fileInDocs = documentsURL.appendingPathComponent(filename)
                 if assetExists(at: fileInDocs) {
+                    var resourceValues = URLResourceValues()
+                    resourceValues.isExcludedFromBackup = true
+                    var mutableURL = fileInDocs
+                    try? mutableURL.setResourceValues(resourceValues)
                     return fileInDocs
                 }
             }

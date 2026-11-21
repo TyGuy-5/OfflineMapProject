@@ -147,10 +147,9 @@ public final class RoutingService: NSObject, @unchecked Sendable, AVSpeechSynthe
         }
         set {
             voiceLock.lock()
-            let changedToMuted = newValue && !_isVoiceMuted
             _isVoiceMuted = newValue
             voiceLock.unlock()
-            if changedToMuted {
+            if newValue {
                 stopVoice()
             }
         }
@@ -462,7 +461,7 @@ public final class RoutingService: NSObject, @unchecked Sendable, AVSpeechSynthe
 
         let now = Date()
         let isSameText = (text == lastSpokenInstruction)
-        let isSameStep = (stepId != nil && lastSpokenStepId != nil) ? (stepId == lastSpokenStepId) : true
+        let isSameStep = (stepId == lastSpokenStepId)
         let timeSinceLastPrompt = now.timeIntervalSince(lastSpokenTime)
 
         // Drop duplicate prompts only if it is the same step and occurred within 6 seconds
