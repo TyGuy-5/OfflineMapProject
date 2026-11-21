@@ -136,11 +136,21 @@ public final class RoutingService: NSObject, @unchecked Sendable, AVSpeechSynthe
         queue.sync { valhalla != nil }
     }
 
-    // Voice Guidance State (Thread Confined)
+    // Voice Guidance State (Synchronized via voiceLock)
     private let speechSynthesizer = AVSpeechSynthesizer()
-    @Published public var isVoiceMuted: Bool = false {
-        didSet {
-            if isVoiceMuted {
+    private var _isVoiceMuted: Bool = false
+    public var isVoiceMuted: Bool {
+        get {
+            voiceLock.lock()
+            defer { voiceLock.unlock() }
+            return _isVoiceMuted
+        }
+        set {
+            voiceLock.lock()
+            let changedToMuted = newValue && !_isVoiceMuted
+            _isVoiceMuted = newValue
+            voiceLock.unlock()
+            if changedToMuted {
                 stopVoice()
             }
         }
@@ -156,6 +166,9 @@ public final class RoutingService: NSObject, @unchecked Sendable, AVSpeechSynthe
         voiceLock.lock()
         activeSpeechGeneration += 1
         utteranceGenerations.removeAll()
+        lastSpokenInstruction = ""
+        lastSpokenStepId = nil
+        lastSpokenTime = .distantPast
         voiceLock.unlock()
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
@@ -283,7 +296,10 @@ public final class RoutingService: NSObject, @unchecked Sendable, AVSpeechSynthe
         mode: String = "auto",
         useMetric: Bool = false
     ) -> RouteDetails? {
-        _ = initGroup.wait(timeout: .now() + 5.0)
+        guard initGroup.wait(timeout: .now() + 5.0) == .success else {
+            print("RoutingService ERROR: Valhalla initialization timed out after 5.0 seconds.")
+            return nil
+        }
         return queue.sync { () -> RouteDetails? in
             if self.valhalla == nil {
                 self.setupValhalla()
@@ -439,14 +455,14 @@ public final class RoutingService: NSObject, @unchecked Sendable, AVSpeechSynthe
     // MARK: - Voice Navigation & Audio Session Management
     public func speakTurnInstruction(_ text: String, stepId: Int? = nil, force: Bool = false) {
         voiceLock.lock()
-        guard !isVoiceMuted && !text.isEmpty else {
+        guard !_isVoiceMuted && !text.isEmpty else {
             voiceLock.unlock()
             return
         }
 
         let now = Date()
         let isSameText = (text == lastSpokenInstruction)
-        let isSameStep = (stepId != nil && stepId == lastSpokenStepId)
+        let isSameStep = (stepId != nil && lastSpokenStepId != nil) ? (stepId == lastSpokenStepId) : true
         let timeSinceLastPrompt = now.timeIntervalSince(lastSpokenTime)
 
         // Drop duplicate prompts only if it is the same step and occurred within 6 seconds
@@ -466,9 +482,10 @@ public final class RoutingService: NSObject, @unchecked Sendable, AVSpeechSynthe
             guard let self = self else { return }
             self.voiceLock.lock()
             let currentGen = self.activeSpeechGeneration
+            let isMuted = self._isVoiceMuted
             self.voiceLock.unlock()
 
-            guard generation == currentGen, !self.isVoiceMuted else { return }
+            guard generation == currentGen, !isMuted else { return }
 
             if force || self.speechSynthesizer.isSpeaking {
                 self.speechSynthesizer.stopSpeaking(at: .immediate)

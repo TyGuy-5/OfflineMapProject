@@ -21,7 +21,15 @@ public struct SearchResult: Identifiable, Hashable, Sendable {
         let parkKeywords: Set<String> = ["park", "parks", "trail", "lake", "forest"]
         let hospitalKeywords: Set<String> = ["hospital", "clinic", "medical", "health", "doctor", "pharmacy", "infirmary"]
         let airportKeywords: Set<String> = ["airport", "airfield", "airstrip"]
-        let groceryKeywords: Set<String> = ["grocery", "groceries", "supermarket", "safeway", "walmart", "costco"]
+        let groceryKeywords: Set<String> = [
+            "grocery", "groceries", "supermarket", "supermarkets", "safeway",
+            "walmart", "costco", "carrs", "kroger", "albertsons", "aldi",
+            "sprouts", "bodega", "foodmart", "iga"
+        ]
+
+        let isFredMeyer = words.contains("fred") && words.contains("meyer")
+        let isTraderJoes = words.contains("trader") && (words.contains("joe") || words.contains("joes"))
+        let isWholeFoods = words.contains("whole") && (words.contains("foods") || words.contains("food"))
 
         if !words.isDisjoint(with: gasKeywords) {
             return "gas"
@@ -39,7 +47,7 @@ public struct SearchResult: Identifiable, Hashable, Sendable {
             return "hospital"
         } else if !words.isDisjoint(with: airportKeywords) {
             return "airport"
-        } else if !words.isDisjoint(with: groceryKeywords) || words.contains("market") {
+        } else if !words.isDisjoint(with: groceryKeywords) || words.contains("market") || isFredMeyer || isTraderJoes || isWholeFoods {
             return "grocery"
         } else {
             return "place"
@@ -129,7 +137,13 @@ public final class SearchService: @unchecked Sendable, ObservableObject {
         let tokens = query.components(separatedBy: nonAlphanumeric).filter { !$0.isEmpty }
         guard !tokens.isEmpty else { return [] }
 
-        let searchQuery = tokens.map { "\"\($0)\"*" }.joined(separator: " ")
+        let normalizedQuery = tokens.joined(separator: " ").lowercased()
+        let searchQuery: String
+        if normalizedQuery == "groceries" || normalizedQuery == "grocery" {
+            searchQuery = "\"grocery\"* OR \"groceries\"* OR \"supermarket\"* OR \"market\"*"
+        } else {
+            searchQuery = tokens.map { "\"\($0)\"*" }.joined(separator: " ")
+        }
         var results: [SearchResult] = []
 
         if let user = userLocation {
@@ -319,9 +333,6 @@ public final class SearchService: @unchecked Sendable, ObservableObject {
                     minDistanceMeters = d
                     closest = SearchResult(id: rId, name: rName, lat: lat, lon: lon)
                 }
-                if minDistanceMeters < 25.0 {
-                    break
-                }
             }
         }
 
@@ -333,19 +344,93 @@ public final class SearchService: @unchecked Sendable, ObservableObject {
         )
     }
 
-    /// Detect and parse decimal coordinates in search bar (e.g. "64.8569, -147.8028")
+    /// Detect and parse coordinates in search bar (e.g. "64.8569, -147.8028", "64.8436° N, 147.7215° W")
     public func parseCoordinates(query: String) -> CLLocationCoordinate2D? {
-        let parts = query.components(separatedBy: CharacterSet(charactersIn: ",; "))
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
 
-        guard parts.count == 2,
-              let lat = Double(parts[0]),
-              let lon = Double(parts[1]),
-              lat >= -90 && lat <= 90,
-              lon >= -180 && lon <= 180 else {
+        let pattern = #"([+-]?\d+(?:\.\d+)?)\s*[°º˚]?\s*([NSEWnsew])?"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+
+        let nsString = trimmed as NSString
+        let matches = regex.matches(in: trimmed, range: NSRange(location: 0, length: nsString.length))
+        guard matches.count == 2 else { return nil }
+
+        // Ensure remaining non-matched text contains only allowed delimiter characters
+        let nonCoord = regex.stringByReplacingMatches(
+            in: trimmed,
+            options: [],
+            range: NSRange(location: 0, length: nsString.length),
+            withTemplate: ""
+        )
+        let allowedSeparators = CharacterSet(charactersIn: ",; \t\n°º˚/")
+        guard nonCoord.unicodeScalars.allSatisfy({ allowedSeparators.contains($0) }) else { return nil }
+
+        struct CoordComponent {
+            let value: Double
+            let cardinal: Character?
+        }
+
+        var components: [CoordComponent] = []
+        for match in matches {
+            let valRange = match.range(at: 1)
+            guard valRange.location != NSNotFound,
+                  let val = Double(nsString.substring(with: valRange)) else { return nil }
+
+            var card: Character? = nil
+            let cardRange = match.range(at: 2)
+            if cardRange.location != NSNotFound {
+                let cardStr = nsString.substring(with: cardRange).uppercased()
+                if let first = cardStr.first {
+                    card = first
+                }
+            }
+            components.append(CoordComponent(value: val, cardinal: card))
+        }
+
+        guard components.count == 2 else { return nil }
+        let c0 = components[0]
+        let c1 = components[1]
+        var lat: Double?
+        var lon: Double?
+
+        if let dir0 = c0.cardinal, let dir1 = c1.cardinal {
+            if (dir0 == "N" || dir0 == "S") && (dir1 == "E" || dir1 == "W") {
+                lat = (dir0 == "S") ? -abs(c0.value) : abs(c0.value)
+                lon = (dir1 == "W") ? -abs(c1.value) : abs(c1.value)
+            } else if (dir0 == "E" || dir0 == "W") && (dir1 == "N" || dir1 == "S") {
+                lon = (dir0 == "W") ? -abs(c0.value) : abs(c0.value)
+                lat = (dir1 == "S") ? -abs(c1.value) : abs(c1.value)
+            } else {
+                return nil
+            }
+        } else if let dir0 = c0.cardinal {
+            if dir0 == "N" || dir0 == "S" {
+                lat = (dir0 == "S") ? -abs(c0.value) : abs(c0.value)
+                lon = c1.value
+            } else {
+                lon = (dir0 == "W") ? -abs(c0.value) : abs(c0.value)
+                lat = c1.value
+            }
+        } else if let dir1 = c1.cardinal {
+            if dir1 == "N" || dir1 == "S" {
+                lat = (dir1 == "S") ? -abs(c1.value) : abs(c1.value)
+                lon = c0.value
+            } else {
+                lon = (dir1 == "W") ? -abs(c1.value) : abs(c1.value)
+                lat = c0.value
+            }
+        } else {
+            lat = c0.value
+            lon = c1.value
+        }
+
+        guard let finalLat = lat, let finalLon = lon,
+              finalLat >= -90.0 && finalLat <= 90.0,
+              finalLon >= -180.0 && finalLon <= 180.0 else {
             return nil
         }
-        return CLLocationCoordinate2D(latitude: lat, longitude: lon)
+
+        return CLLocationCoordinate2D(latitude: finalLat, longitude: finalLon)
     }
 }

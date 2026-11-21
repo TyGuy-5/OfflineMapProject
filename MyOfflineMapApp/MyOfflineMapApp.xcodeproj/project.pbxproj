@@ -18,6 +18,7 @@
 		64D453D025D733B298A3C7A9 /* MyOfflineMapAppTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB00E630BBAC19EC3EE7B49C /* MyOfflineMapAppTests.swift */; };
 		6BD11416C3364D4517CD29EA /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 6904B7A77BBDB455A0AABC52 /* PrivacyInfo.xcprivacy */; };
 		B0A565CD5585E55547C33037 /* MapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67C1C59C7C8FB5E65096D971 /* MapView.swift */; };
+		B832C3190B861273E29C1031 /* NavigationViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 153ED26CBF26AD10CFB12A55 /* NavigationViewModel.swift */; };
 		B964D7962C2E3437D1A08087 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 186CAEA7EEF1766A5DA7B0C3 /* LocationManager.swift */; };
 		C63EB958E98FF723F2C61DD6 /* RoutingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EA830837D02B303BC7AAB0 /* RoutingService.swift */; };
 		D12495ED9DB56D2E2AE35750 /* SQLite in Frameworks */ = {isa = PBXBuildFile; productRef = 1A0C3B1C3E72782F28DF3D3C /* SQLite */; };
@@ -38,6 +39,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		153ED26CBF26AD10CFB12A55 /* NavigationViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationViewModel.swift; sourceTree = "<group>"; };
 		1805091007FB4DC4E1C3AD36 /* OfflineDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineDataManager.swift; sourceTree = "<group>"; };
 		186CAEA7EEF1766A5DA7B0C3 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
 		20EA830837D02B303BC7AAB0 /* RoutingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutingService.swift; sourceTree = "<group>"; };
@@ -107,6 +109,7 @@
 				186CAEA7EEF1766A5DA7B0C3 /* LocationManager.swift */,
 				67C1C59C7C8FB5E65096D971 /* MapView.swift */,
 				E73B6400BE26C024B3A94B1B /* MyOfflineMapApp.swift */,
+				153ED26CBF26AD10CFB12A55 /* NavigationViewModel.swift */,
 				1805091007FB4DC4E1C3AD36 /* OfflineDataManager.swift */,
 				20EA830837D02B303BC7AAB0 /* RoutingService.swift */,
 				C5410B8020863F00899978A0 /* SearchService.swift */,
@@ -237,6 +240,7 @@
 				B964D7962C2E3437D1A08087 /* LocationManager.swift in Sources */,
 				B0A565CD5585E55547C33037 /* MapView.swift in Sources */,
 				58F7A1FB3ACB538936C8E39C /* MyOfflineMapApp.swift in Sources */,
+				B832C3190B861273E29C1031 /* NavigationViewModel.swift in Sources */,
 				3D04CF037DA1F52D649FC8DC /* OfflineDataManager.swift in Sources */,
 				C63EB958E98FF723F2C61DD6 /* RoutingService.swift in Sources */,
 				227D6C3FB9CBF6541AB99CBD /* SearchService.swift in Sources */,

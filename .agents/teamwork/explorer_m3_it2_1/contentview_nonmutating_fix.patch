@@ -1,0 +1,191 @@
+--- MyOfflineMapApp/Sources/ContentView.swift	2026-11-06 23:32:31
++++ .agents/teamwork/explorer_m3_it2_1/ContentView_proposed.swift	2026-11-06 23:52:21
+@@ -19,151 +19,151 @@
+ 
+     var appMode: MapAppMode {
+         get { viewModel.appMode }
+-        set { viewModel.appMode = newValue }
++        nonmutating set { viewModel.appMode = newValue }
+     }
+     var selectedPlace: SearchResult? {
+         get { viewModel.selectedPlace }
+-        set { viewModel.selectedPlace = newValue }
++        nonmutating set { viewModel.selectedPlace = newValue }
+     }
+     var routeDetails: RouteDetails? {
+         get { viewModel.routeDetails }
+-        set { viewModel.routeDetails = newValue }
++        nonmutating set { viewModel.routeDetails = newValue }
+     }
+     var selectedTravelMode: String {
+         get { viewModel.selectedTravelMode }
+-        set { viewModel.selectedTravelMode = newValue }
++        nonmutating set { viewModel.selectedTravelMode = newValue }
+     }
+     var showStepsSheet: Bool {
+         get { viewModel.showStepsSheet }
+-        set { viewModel.showStepsSheet = newValue }
++        nonmutating set { viewModel.showStepsSheet = newValue }
+     }
+     var isHudMode: Bool {
+         get { viewModel.isHudMode }
+-        set { viewModel.isHudMode = newValue }
++        nonmutating set { viewModel.isHudMode = newValue }
+     }
+     var useMetric: Bool {
+         get { viewModel.useMetric }
+-        set { viewModel.useMetric = newValue }
++        nonmutating set { viewModel.useMetric = newValue }
+     }
+     var isVoiceMuted: Bool {
+         get { viewModel.isVoiceMuted }
+-        set { viewModel.isVoiceMuted = newValue }
++        nonmutating set { viewModel.isVoiceMuted = newValue }
+     }
+     var destinationText: String {
+         get { viewModel.destinationText }
+-        set { viewModel.destinationText = newValue }
++        nonmutating set { viewModel.destinationText = newValue }
+     }
+     var searchResults: [SearchResult] {
+         get { viewModel.searchResults }
+-        set { viewModel.searchResults = newValue }
++        nonmutating set { viewModel.searchResults = newValue }
+     }
+     var isSearching: Bool {
+         get { viewModel.isSearching }
+-        set { viewModel.isSearching = newValue }
++        nonmutating set { viewModel.isSearching = newValue }
+     }
+     var searchTask: Task<Void, Never>? {
+         get { viewModel.searchTask }
+-        set { viewModel.searchTask = newValue }
++        nonmutating set { viewModel.searchTask = newValue }
+     }
+     var isProgrammaticTextChange: Bool {
+         get { viewModel.isProgrammaticTextChange }
+-        set { viewModel.isProgrammaticTextChange = newValue }
++        nonmutating set { viewModel.isProgrammaticTextChange = newValue }
+     }
+     var selectedCoordinate: CLLocationCoordinate2D? {
+         get { viewModel.selectedCoordinate }
+-        set { viewModel.selectedCoordinate = newValue }
++        nonmutating set { viewModel.selectedCoordinate = newValue }
+     }
+     var routeCoordinates: [CLLocationCoordinate2D]? {
+         get { viewModel.routeCoordinates }
+-        set { viewModel.routeCoordinates = newValue }
++        nonmutating set { viewModel.routeCoordinates = newValue }
+     }
+     var simulatedUserCoordinate: CLLocationCoordinate2D? {
+         get { viewModel.simulatedUserCoordinate }
+-        set { viewModel.simulatedUserCoordinate = newValue }
++        nonmutating set { viewModel.simulatedUserCoordinate = newValue }
+     }
+     var userLocationCenter: CLLocationCoordinate2D? {
+         get { viewModel.userLocationCenter }
+-        set { viewModel.userLocationCenter = newValue }
++        nonmutating set { viewModel.userLocationCenter = newValue }
+     }
+     var simulatedHeading: Double? {
+         get { viewModel.simulatedHeading }
+-        set { viewModel.simulatedHeading = newValue }
++        nonmutating set { viewModel.simulatedHeading = newValue }
+     }
+     var zoomStep: Double? {
+         get { viewModel.zoomStep }
+-        set { viewModel.zoomStep = newValue }
++        nonmutating set { viewModel.zoomStep = newValue }
+     }
+     var isNavigating: Bool {
+         get { viewModel.isNavigating }
+-        set { viewModel.isNavigating = newValue }
++        nonmutating set { viewModel.isNavigating = newValue }
+     }
+     var isSimulating: Bool {
+         get { viewModel.isSimulating }
+-        set { viewModel.isSimulating = newValue }
++        nonmutating set { viewModel.isSimulating = newValue }
+     }
+     var currentStepIndex: Int {
+         get { viewModel.currentStepIndex }
+-        set { viewModel.currentStepIndex = newValue }
++        nonmutating set { viewModel.currentStepIndex = newValue }
+     }
+     var currentCoordIndex: Int {
+         get { viewModel.currentCoordIndex }
+-        set { viewModel.currentCoordIndex = newValue }
++        nonmutating set { viewModel.currentCoordIndex = newValue }
+     }
+     var simulatedSpeedMph: Int {
+         get { viewModel.simulatedSpeedMph }
+-        set { viewModel.simulatedSpeedMph = newValue }
++        nonmutating set { viewModel.simulatedSpeedMph = newValue }
+     }
+     var simulationSpeedMultiplier: Double {
+         get { viewModel.simulationSpeedMultiplier }
+-        set { viewModel.simulationSpeedMultiplier = newValue }
++        nonmutating set { viewModel.simulationSpeedMultiplier = newValue }
+     }
+     var isRecalculating: Bool {
+         get { viewModel.isRecalculating }
+-        set { viewModel.isRecalculating = newValue }
++        nonmutating set { viewModel.isRecalculating = newValue }
+     }
+     var consecutiveRerouteFailures: Int {
+         get { viewModel.consecutiveRerouteFailures }
+-        set { viewModel.consecutiveRerouteFailures = newValue }
++        nonmutating set { viewModel.consecutiveRerouteFailures = newValue }
+     }
+     var lastRerouteTime: Date {
+         get { viewModel.lastRerouteTime }
+-        set { viewModel.lastRerouteTime = newValue }
++        nonmutating set { viewModel.lastRerouteTime = newValue }
+     }
+     var activeRouteRequestId: UUID? {
+         get { viewModel.activeRouteRequestId }
+-        set { viewModel.activeRouteRequestId = newValue }
++        nonmutating set { viewModel.activeRouteRequestId = newValue }
+     }
+     var remainingStepDistanceMiles: Double {
+         get { viewModel.remainingStepDistanceMiles }
+-        set { viewModel.remainingStepDistanceMiles = newValue }
++        nonmutating set { viewModel.remainingStepDistanceMiles = newValue }
+     }
+     var remainingRouteDistanceMiles: Double {
+         get { viewModel.remainingRouteDistanceMiles }
+-        set { viewModel.remainingRouteDistanceMiles = newValue }
++        nonmutating set { viewModel.remainingRouteDistanceMiles = newValue }
+     }
+     var remainingRouteDurationSeconds: Double {
+         get { viewModel.remainingRouteDurationSeconds }
+-        set { viewModel.remainingRouteDurationSeconds = newValue }
++        nonmutating set { viewModel.remainingRouteDurationSeconds = newValue }
+     }
+     var dynamicArrivalDate: Date {
+         get { viewModel.dynamicArrivalDate }
+-        set { viewModel.dynamicArrivalDate = newValue }
++        nonmutating set { viewModel.dynamicArrivalDate = newValue }
+     }
+     var hasAnnouncedAdvanceTurn: Bool {
+         get { viewModel.hasAnnouncedAdvanceTurn }
+-        set { viewModel.hasAnnouncedAdvanceTurn = newValue }
++        nonmutating set { viewModel.hasAnnouncedAdvanceTurn = newValue }
+     }
+     var errorMessage: String? {
+         get { viewModel.errorMessage }
+-        set { viewModel.errorMessage = newValue }
++        nonmutating set { viewModel.errorMessage = newValue }
+     }
+     var showErrorAlert: Bool {
+         get { viewModel.showErrorAlert }
+-        set { viewModel.showErrorAlert = newValue }
++        nonmutating set { viewModel.showErrorAlert = newValue }
+     }
+     var isMapDataMissing: Bool {
+         get { viewModel.isMapDataMissing }
+-        set { viewModel.isMapDataMissing = newValue }
++        nonmutating set { viewModel.isMapDataMissing = newValue }
+     }
+ 
+     var displaySpeed: Int { viewModel.displaySpeed }

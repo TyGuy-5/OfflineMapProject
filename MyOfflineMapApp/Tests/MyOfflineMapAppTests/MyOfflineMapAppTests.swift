@@ -3,7 +3,6 @@ import CoreLocation
 import MapLibre
 import Valhalla
 import ValhallaModels
-import ValhallaConfigModels
 @testable import MyOfflineMapApp
 
 final class MyOfflineMapAppTests: XCTestCase {
@@ -156,12 +155,49 @@ final class MyOfflineMapAppTests: XCTestCase {
         guard FileManager.default.fileExists(atPath: testTarPath) else {
             throw XCTSkip("alaska_tiles.tar not available on disk")
         }
-        var config = ValhallaConfig()
-        config.mjolnir?.tileExtract = testTarPath
-        config.mjolnir?.trafficExtract = nil
-        config.mjolnir?.tileDir = nil
-        config.loki?.useConnectivity = false
-        let valhalla = try Valhalla(config)
+
+        let configURL = OfflineDataManager.url(for: "valhalla.json")
+        guard FileManager.default.fileExists(atPath: configURL.path) else {
+            throw XCTSkip("valhalla.json not available on disk")
+        }
+        guard let configData = try? Data(contentsOf: configURL),
+              var configJson = (try? JSONSerialization.jsonObject(with: configData)) as? [String: Any] else {
+            XCTFail("Failed to load valhalla.json from \(configURL.path)")
+            return
+        }
+
+        var mjolnir = configJson["mjolnir"] as? [String: Any] ?? [String: Any]()
+        mjolnir["tile_extract"] = testTarPath
+
+        let tempTilesDir = FileManager.default.temporaryDirectory.appendingPathComponent("valhalla_binned_test_tiles")
+        try? FileManager.default.createDirectory(at: tempTilesDir, withIntermediateDirectories: true)
+        mjolnir["tile_dir"] = tempTilesDir.path
+
+        mjolnir.removeValue(forKey: "admin")
+        mjolnir.removeValue(forKey: "timezone")
+        mjolnir.removeValue(forKey: "traffic_extract")
+        mjolnir.removeValue(forKey: "landmarks")
+        mjolnir.removeValue(forKey: "transit_dir")
+        mjolnir.removeValue(forKey: "transit_feeds_dir")
+
+        var dataProc = mjolnir["data_processing"] as? [String: Any] ?? [String: Any]()
+        dataProc["use_admin_db"] = false
+        dataProc["scan_tar"] = false
+        mjolnir["data_processing"] = dataProc
+        configJson["mjolnir"] = mjolnir
+
+        var loki = configJson["loki"] as? [String: Any] ?? [String: Any]()
+        loki["use_connectivity"] = false
+        configJson["loki"] = loki
+
+        let tempConfigURL = FileManager.default.temporaryDirectory.appendingPathComponent("valhalla_binned_test_runtime.json")
+        let patchedData = try JSONSerialization.data(withJSONObject: configJson, options: [.prettyPrinted])
+        try patchedData.write(to: tempConfigURL)
+        defer {
+            try? FileManager.default.removeItem(at: tempConfigURL)
+        }
+
+        let valhalla = try Valhalla(configPath: tempConfigURL.path)
         
         // Downtown Fairbanks to South Cushman St
         let start = CLLocationCoordinate2D(latitude: 64.8436, longitude: -147.7215)
@@ -303,6 +339,65 @@ final class MyOfflineMapAppTests: XCTestCase {
 
         let invalid2 = searchService.parseCoordinates(query: "95.0, -147.0") // Latitude > 90
         XCTAssertNil(invalid2)
+    }
+
+    func testSearchServiceDegreeSymbolVariationsAndHemispheres() {
+        let service = SearchService()
+
+        // 1. Standard degree symbol ° (U+00B0)
+        let c1 = service.parseCoordinates(query: "64.8436°, -147.7215°")
+        XCTAssertNotNil(c1, "Should parse standard degree sign (U+00B0)")
+        XCTAssertEqual(c1?.latitude ?? 0, 64.8436, accuracy: 0.0001)
+        XCTAssertEqual(c1?.longitude ?? 0, -147.7215, accuracy: 0.0001)
+
+        // 2. Masculine ordinal indicator º (U+00BA) - common iOS keyboard symbol
+        let c2 = service.parseCoordinates(query: "64.8436º, -147.7215º")
+        XCTAssertNotNil(c2, "Should parse masculine ordinal indicator (U+00BA)")
+        XCTAssertEqual(c2?.latitude ?? 0, 64.8436, accuracy: 0.0001)
+        XCTAssertEqual(c2?.longitude ?? 0, -147.7215, accuracy: 0.0001)
+
+        // 3. Ring above ˚ (U+02DA) - macOS Option+K symbol
+        let c3 = service.parseCoordinates(query: "64.8436˚, -147.7215˚")
+        XCTAssertNotNil(c3, "Should parse ring above symbol (U+02DA)")
+        XCTAssertEqual(c3?.latitude ?? 0, 64.8436, accuracy: 0.0001)
+        XCTAssertEqual(c3?.longitude ?? 0, -147.7215, accuracy: 0.0001)
+
+        // 4. Cardinal directions N, S, E, W with various degree symbols and whitespace
+        // 4a. North & West with U+00BA
+        let c4 = service.parseCoordinates(query: "64.8436º N, 147.7215º W")
+        XCTAssertNotNil(c4, "Should parse N and W with U+00BA")
+        XCTAssertEqual(c4?.latitude ?? 0, 64.8436, accuracy: 0.0001)
+        XCTAssertEqual(c4?.longitude ?? 0, -147.7215, accuracy: 0.0001)
+
+        // 4b. South & West with U+02DA (Buenos Aires)
+        let c5 = service.parseCoordinates(query: "34.6037˚ S, 58.3816˚ W")
+        XCTAssertNotNil(c5, "Should parse S and W with U+02DA")
+        XCTAssertEqual(c5?.latitude ?? 0, -34.6037, accuracy: 0.0001)
+        XCTAssertEqual(c5?.longitude ?? 0, -58.3816, accuracy: 0.0001)
+
+        // 4c. North & East with standard degree symbol (Tokyo)
+        let c6 = service.parseCoordinates(query: "35.6762° N, 139.6503° E")
+        XCTAssertNotNil(c6, "Should parse N and E with U+00B0")
+        XCTAssertEqual(c6?.latitude ?? 0, 35.6762, accuracy: 0.0001)
+        XCTAssertEqual(c6?.longitude ?? 0, 139.6503, accuracy: 0.0001)
+
+        // 4d. South & East (Sydney) with mixed symbols and whitespace
+        let c7 = service.parseCoordinates(query: "  33.8688 º  S  ;  151.2093 ˚  E  ")
+        XCTAssertNotNil(c7, "Should parse mixed degree symbols with variable whitespace")
+        XCTAssertEqual(c7?.latitude ?? 0, -33.8688, accuracy: 0.0001)
+        XCTAssertEqual(c7?.longitude ?? 0, 151.2093, accuracy: 0.0001)
+
+        // 4e. Cardinal direction reversed order (Lon E/W then Lat N/S)
+        let c8 = service.parseCoordinates(query: "147.7215º W, 64.8436º N")
+        XCTAssertNotNil(c8, "Should parse Lon first when cardinals disambiguate")
+        XCTAssertEqual(c8?.latitude ?? 0, 64.8436, accuracy: 0.0001)
+        XCTAssertEqual(c8?.longitude ?? 0, -147.7215, accuracy: 0.0001)
+
+        // 5. Negative numbers with degree symbols and slash separators
+        let c9 = service.parseCoordinates(query: "-34.6037º / -58.3816˚")
+        XCTAssertNotNil(c9, "Should parse negative numbers with degree symbols and slash separator")
+        XCTAssertEqual(c9?.latitude ?? 0, -34.6037, accuracy: 0.0001)
+        XCTAssertEqual(c9?.longitude ?? 0, -58.3816, accuracy: 0.0001)
     }
 
     func testMetricDistanceFormatting() {

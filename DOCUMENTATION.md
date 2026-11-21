@@ -391,7 +391,7 @@ The map displayed only a blank light-gray screen when running offline, despite h
 #### Root Cause Analysis
 1. Remote Sprite and Glyph Halts: In default MapLibre style JSONs, font glyphs and icon sprites point to remote HTTP endpoints (https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf). When offline, the map engine blocks layer rendering while awaiting network timeouts.
 2. C++ File URL Percent-Encoding: The project directory contained spaces and parentheses:
-   /Volumes/Extended Hard Drive 1Tb (Mac Mini M4)/OfflineMapProject/...
+   /Volumes/External Drive (Sample)/OfflineMapProject/...
    MapLibre's underlying C++ file reader decoded %20 inconsistently, throwing POSIX ENOENT (File not found).
 
 #### Implemented Solution
@@ -618,14 +618,14 @@ xcodegen generate
 cd ..
 
 # 2. Build and run unit tests on iPhone 16 Simulator
-DEVELOPER_DIR="/Volumes/Extended Hard Drive 1Tb (Mac Mini M4)/Xcode.app/Contents/Developer" xcodebuild test \
+xcodebuild test \
   -project MyOfflineMapApp/MyOfflineMapApp.xcodeproj \
   -scheme MyOfflineMapApp \
-  -destination 'platform=iOS Simulator,id=0A20D9A5-C44D-4D07-89E0-F1F0B2FE5CFE'
+  -destination 'platform=iOS Simulator,name=iPhone 16'
 
 # 3. Launch the compiled application
-DEVELOPER_DIR="/Volumes/Extended Hard Drive 1Tb (Mac Mini M4)/Xcode.app/Contents/Developer" xcrun simctl launch \
-  --terminate-running-process 0A20D9A5-C44D-4D07-89E0-F1F0B2FE5CFE com.tyguy5.MyOfflineMapApp.debug
+xcrun simctl launch \
+  --terminate-running-process booted com.tyguy5.MyOfflineMapApp.debug
 ```
 
 ### Test Suite Summary
@@ -674,7 +674,7 @@ All 46 automated tests across `MyOfflineMapAppTests.swift` (17 tests) and `Remed
 
 ## 9. Attribution, Licensing, and Open-Source Compliance
 
-This software integrates open-source libraries and open-data projects in compliance with their respective licensing terms. Full third-party notices and licenses are documented in [THIRD_PARTY_NOTICES.md](file:///Volumes/Extended%20Hard%20Drive%201Tb%20%28Mac%20Mini%20M4%29/OfflineMapProject/THIRD_PARTY_NOTICES.md):
+This software integrates open-source libraries and open-data projects in compliance with their respective licensing terms. Full third-party notices and licenses are documented in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md):
 
 - OpenStreetMap: Map data is copyright OpenStreetMap contributors and licensed under the Open Database License (ODbL 1.0).
 - OpenMapTiles: Vector tile schema is copyright OpenMapTiles and licensed under CC-BY 4.0.

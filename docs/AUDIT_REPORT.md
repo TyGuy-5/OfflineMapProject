@@ -89,10 +89,10 @@ A line-by-line git diff inspection against base commit `cf3358f0ac75c33e17cf1863
 
 ### 4.1 Full Test Suite Execution (Baseline + Remediation + Adversarial)
 ```bash
-DEVELOPER_DIR="/Volumes/Extended Hard Drive 1Tb (Mac Mini M4)/Xcode.app/Contents/Developer" xcodebuild test \
-  -project "/Volumes/Extended Hard Drive 1Tb (Mac Mini M4)/OfflineMapProject/MyOfflineMapApp/MyOfflineMapApp.xcodeproj" \
+xcodebuild test \
+  -project MyOfflineMapApp/MyOfflineMapApp.xcodeproj \
   -scheme MyOfflineMapApp \
-  -destination 'platform=iOS Simulator,id=0A20D9A5-C44D-4D07-89E0-F1F0B2FE5CFE'
+  -destination 'platform=iOS Simulator,name=iPhone 16'
 ```
 **Outcome**:
 - Executed: **46 tests** (17 baseline + 29 remediation/adversarial)
@@ -102,10 +102,10 @@ DEVELOPER_DIR="/Volumes/Extended Hard Drive 1Tb (Mac Mini M4)/Xcode.app/Contents
 
 ### 4.2 Strict Concurrency Diagnostic Clean Build
 ```bash
-DEVELOPER_DIR="/Volumes/Extended Hard Drive 1Tb (Mac Mini M4)/Xcode.app/Contents/Developer" xcodebuild clean build \
-  -project "/Volumes/Extended Hard Drive 1Tb (Mac Mini M4)/OfflineMapProject/MyOfflineMapApp/MyOfflineMapApp.xcodeproj" \
+xcodebuild clean build \
+  -project MyOfflineMapApp/MyOfflineMapApp.xcodeproj \
   -scheme MyOfflineMapApp \
-  -destination 'platform=iOS Simulator,id=0A20D9A5-C44D-4D07-89E0-F1F0B2FE5CFE' 2>&1 | grep "error in the Swift 6 language mode"
+  -destination 'platform=iOS Simulator,name=iPhone 16' 2>&1 | grep "error in the Swift 6 language mode"
 ```
 **Outcome**:
 - Exit code: **1** (grep found 0 matches)

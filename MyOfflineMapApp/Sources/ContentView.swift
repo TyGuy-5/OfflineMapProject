@@ -1,143 +1,274 @@
 import SwiftUI
 import CoreLocation
-
-enum MapAppMode: Equatable {
-    case explore
-    case searchList
-    case placeDetail
-    case routePreview
-    case navigation
-}
+#if canImport(UIKit)
+import UIKit
+#endif
 
 struct ContentView: View {
-    @StateObject private var locationManager = LocationManager()
-
-    // Mode state
-    @State private var appMode: MapAppMode = .explore
-    @State private var selectedPlace: SearchResult?
-    @State var routeDetails: RouteDetails?
-    @State private var selectedTravelMode: String = "auto"
-    @State private var showStepsSheet = false
+    @StateObject var viewModel: NavigationViewModel
     @State private var showAttributionAlert = false
-    @State private var isHudMode = false // Windshield HUD Reflection Mode
-    @State var useMetric = false // mph vs km/h
 
-    // Search state
-    @State private var destinationText = ""
-    @State private var searchResults: [SearchResult] = []
-    @State private var isSearching = false
-    @State var searchTask: Task<Void, Never>?
+    public init(viewModel: NavigationViewModel? = nil) {
+        _viewModel = StateObject(wrappedValue: viewModel ?? NavigationViewModel())
+    }
 
-    // Map bindings
-    @State private var selectedCoordinate: CLLocationCoordinate2D?
-    @State private var routeCoordinates: [CLLocationCoordinate2D]?
-    @State var simulatedUserCoordinate: CLLocationCoordinate2D?
-    @State private var userLocationCenter: CLLocationCoordinate2D?
-    @State private var simulatedHeading: Double?
-    @State private var zoomStep: Double?
+    // MARK: - Backward-Compatibility Forwarding Properties (Preserves Existing Test Access)
+    var locationManager: LocationManager { viewModel.locationManager }
+    var searchService: SearchService { viewModel.searchService }
+    var routingService: RoutingService { viewModel.routingService }
 
-    // Navigation & simulation state
-    @State var isNavigating = false
-    @State var isSimulating = false
-    @State private var simulationTimer: Timer?
-    @State var currentStepIndex = 0
-    @State var currentCoordIndex = 0
-    @State private var simulatedSpeedMph: Int = 0
-    @State private var simulationSpeedMultiplier: Double = 1.0
-    @State private var isVoiceMuted = false
-    @State var isProgrammaticTextChange = false
-    @State private var isRecalculating = false
-    @State private var consecutiveRerouteFailures = 0
-    @State private var lastRerouteTime = Date.distantPast
-    @State private var activeRouteRequestId: UUID? = nil
-    @State var remainingStepDistanceMiles: Double = 0.0
-    @State private var remainingRouteDistanceMiles: Double = 0.0
-    @State private var remainingRouteDurationSeconds: Double = 0.0
-    @State private var dynamicArrivalDate: Date = Date()
-    @State private var hasAnnouncedAdvanceTurn = false
+    var appMode: MapAppMode {
+        get { viewModel.appMode }
+        nonmutating set { viewModel.appMode = newValue }
+    }
+    var selectedPlace: SearchResult? {
+        get { viewModel.selectedPlace }
+        nonmutating set { viewModel.selectedPlace = newValue }
+    }
+    var routeDetails: RouteDetails? {
+        get { viewModel.routeDetails }
+        nonmutating set { viewModel.routeDetails = newValue }
+    }
+    var selectedTravelMode: String {
+        get { viewModel.selectedTravelMode }
+        nonmutating set { viewModel.selectedTravelMode = newValue }
+    }
+    var showStepsSheet: Bool {
+        get { viewModel.showStepsSheet }
+        nonmutating set { viewModel.showStepsSheet = newValue }
+    }
+    var isHudMode: Bool {
+        get { viewModel.isHudMode }
+        nonmutating set { viewModel.isHudMode = newValue }
+    }
+    var useMetric: Bool {
+        get { viewModel.useMetric }
+        nonmutating set { viewModel.useMetric = newValue }
+    }
+    var isVoiceMuted: Bool {
+        get { viewModel.isVoiceMuted }
+        nonmutating set { viewModel.isVoiceMuted = newValue }
+    }
+    var destinationText: String {
+        get { viewModel.destinationText }
+        nonmutating set { viewModel.destinationText = newValue }
+    }
+    var searchResults: [SearchResult] {
+        get { viewModel.searchResults }
+        nonmutating set { viewModel.searchResults = newValue }
+    }
+    var isSearching: Bool {
+        get { viewModel.isSearching }
+        nonmutating set { viewModel.isSearching = newValue }
+    }
+    var searchTask: Task<Void, Never>? {
+        get { viewModel.searchTask }
+        nonmutating set { viewModel.searchTask = newValue }
+    }
+    var isProgrammaticTextChange: Bool {
+        get { viewModel.isProgrammaticTextChange }
+        nonmutating set { viewModel.isProgrammaticTextChange = newValue }
+    }
+    var selectedCoordinate: CLLocationCoordinate2D? {
+        get { viewModel.selectedCoordinate }
+        nonmutating set { viewModel.selectedCoordinate = newValue }
+    }
+    var routeCoordinates: [CLLocationCoordinate2D]? {
+        get { viewModel.routeCoordinates }
+        nonmutating set { viewModel.routeCoordinates = newValue }
+    }
+    var simulatedUserCoordinate: CLLocationCoordinate2D? {
+        get { viewModel.simulatedUserCoordinate }
+        nonmutating set { viewModel.simulatedUserCoordinate = newValue }
+    }
+    var userLocationCenter: CLLocationCoordinate2D? {
+        get { viewModel.userLocationCenter }
+        nonmutating set { viewModel.userLocationCenter = newValue }
+    }
+    var simulatedHeading: Double? {
+        get { viewModel.simulatedHeading }
+        nonmutating set { viewModel.simulatedHeading = newValue }
+    }
+    var zoomStep: Double? {
+        get { viewModel.zoomStep }
+        nonmutating set { viewModel.zoomStep = newValue }
+    }
+    var isNavigating: Bool {
+        get { viewModel.isNavigating }
+        nonmutating set { viewModel.isNavigating = newValue }
+    }
+    var isSimulating: Bool {
+        get { viewModel.isSimulating }
+        nonmutating set { viewModel.isSimulating = newValue }
+    }
+    var currentStepIndex: Int {
+        get { viewModel.currentStepIndex }
+        nonmutating set { viewModel.currentStepIndex = newValue }
+    }
+    var currentCoordIndex: Int {
+        get { viewModel.currentCoordIndex }
+        nonmutating set { viewModel.currentCoordIndex = newValue }
+    }
+    var simulatedSpeedMph: Int {
+        get { viewModel.simulatedSpeedMph }
+        nonmutating set { viewModel.simulatedSpeedMph = newValue }
+    }
+    var simulationSpeedMultiplier: Double {
+        get { viewModel.simulationSpeedMultiplier }
+        nonmutating set { viewModel.simulationSpeedMultiplier = newValue }
+    }
+    var isRecalculating: Bool {
+        get { viewModel.isRecalculating }
+        nonmutating set { viewModel.isRecalculating = newValue }
+    }
+    var consecutiveRerouteFailures: Int {
+        get { viewModel.consecutiveRerouteFailures }
+        nonmutating set { viewModel.consecutiveRerouteFailures = newValue }
+    }
+    var lastRerouteTime: Date {
+        get { viewModel.lastRerouteTime }
+        nonmutating set { viewModel.lastRerouteTime = newValue }
+    }
+    var activeRouteRequestId: UUID? {
+        get { viewModel.activeRouteRequestId }
+        nonmutating set { viewModel.activeRouteRequestId = newValue }
+    }
+    var remainingStepDistanceMiles: Double {
+        get { viewModel.remainingStepDistanceMiles }
+        nonmutating set { viewModel.remainingStepDistanceMiles = newValue }
+    }
+    var remainingRouteDistanceMiles: Double {
+        get { viewModel.remainingRouteDistanceMiles }
+        nonmutating set { viewModel.remainingRouteDistanceMiles = newValue }
+    }
+    var remainingRouteDurationSeconds: Double {
+        get { viewModel.remainingRouteDurationSeconds }
+        nonmutating set { viewModel.remainingRouteDurationSeconds = newValue }
+    }
+    var dynamicArrivalDate: Date {
+        get { viewModel.dynamicArrivalDate }
+        nonmutating set { viewModel.dynamicArrivalDate = newValue }
+    }
+    var hasAnnouncedAdvanceTurn: Bool {
+        get { viewModel.hasAnnouncedAdvanceTurn }
+        nonmutating set { viewModel.hasAnnouncedAdvanceTurn = newValue }
+    }
+    var errorMessage: String? {
+        get { viewModel.errorMessage }
+        nonmutating set { viewModel.errorMessage = newValue }
+    }
+    var showErrorAlert: Bool {
+        get { viewModel.showErrorAlert }
+        nonmutating set { viewModel.showErrorAlert = newValue }
+    }
+    var isMapDataMissing: Bool {
+        get { viewModel.isMapDataMissing }
+        nonmutating set { viewModel.isMapDataMissing = newValue }
+    }
 
-    private static let hudEtaFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter
-    }()
+    var displaySpeed: Int { viewModel.displaySpeed }
+    var speedUnit: String { viewModel.speedUnit }
+    var altitudeValue: Int { viewModel.altitudeValue }
+    var altitudeUnit: String { viewModel.altitudeUnit }
+    var effectiveUserCoordinate: CLLocationCoordinate2D { viewModel.effectiveUserCoordinate }
+    var formattedRemainingDuration: String { viewModel.formattedRemainingDuration }
+    var formattedRemainingETA: String { viewModel.formattedRemainingETA }
+    var currentNavigationStep: NavigationStep { viewModel.currentNavigationStep }
+    static var defaultAlaskaCoordinate: CLLocationCoordinate2D { NavigationViewModel.defaultAlaskaCoordinate }
 
+    // MARK: - Backward-Compatibility Forwarding Methods
     func formatCountdownDistance(_ miles: Double, useMetric: Bool) -> String {
-        if useMetric {
-            let meters = miles * 1609.34
-            if meters < 1000 {
-                return "\(max(0, Int(meters))) m"
-            } else {
-                return String(format: "%.1f km", max(0, miles * 1.60934))
-            }
-        } else {
-            let feet = miles * 5280
-            if miles < 0.1 {
-                return "\(max(0, Int(feet))) ft"
-            } else {
-                return String(format: "%.1f mi", max(0, miles))
-            }
-        }
+        viewModel.formatCountdownDistance(miles, useMetric: useMetric)
     }
-
-    var formattedRemainingDuration: String {
-        let minutes = Int(remainingRouteDurationSeconds / 60)
-        if minutes < 60 {
-            return "\(max(1, minutes)) min"
-        } else {
-            let hours = minutes / 60
-            let remMin = minutes % 60
-            return "\(hours) hr \(remMin) min"
-        }
-    }
-
-    var formattedRemainingETA: String {
-        ContentView.hudEtaFormatter.string(from: dynamicArrivalDate)
-    }
-
-    // Alerts
-    @State private var errorMessage: String?
-    @State private var showErrorAlert = false
-    @State private var isMapDataMissing: Bool = false
-
-    // Services
-    @StateObject private var searchService = SearchService()
-    @StateObject private var routingService = RoutingService()
-
-    // Live Telemetry
-    var displaySpeed: Int {
-        if isSimulating {
-            return useMetric ? Int(Double(simulatedSpeedMph) * 1.60934) : simulatedSpeedMph
-        }
-        return useMetric ? locationManager.smoothedSpeedKmh : locationManager.smoothedSpeedMph
-    }
-
-    var speedUnit: String {
-        useMetric ? "km/h" : "mph"
-    }
-
-    var altitudeValue: Int {
-        let alt = locationManager.location?.altitude ?? 0
-        return useMetric ? Int(alt) : Int(alt * 3.28084)
-    }
-
-    var altitudeUnit: String {
-        useMetric ? "m" : "ft"
-    }
-
-    static let defaultAlaskaCoordinate = CLLocationCoordinate2D(latitude: 64.8436, longitude: -147.7215)
 
     func isWithinSupportedRegion(_ coord: CLLocationCoordinate2D) -> Bool {
-        return coord.latitude >= 51.0 && coord.latitude <= 72.0 &&
-               coord.longitude >= -179.0 && coord.longitude <= -129.0
+        viewModel.isWithinSupportedRegion(coord)
     }
 
-    var effectiveUserCoordinate: CLLocationCoordinate2D {
-        if let sim = simulatedUserCoordinate { return sim }
-        if let user = locationManager.location?.coordinate, isWithinSupportedRegion(user) {
-            return user
+    func segmentDistanceMeters(p1: CLLocationCoordinate2D, p2: CLLocationCoordinate2D) -> Double {
+        viewModel.segmentDistanceMeters(p1: p1, p2: p2)
+    }
+
+    func dismissSearch() {
+        searchTask?.cancel()
+        viewModel.dismissSearch()
+    }
+
+    func clearSearch() {
+        searchTask?.cancel()
+        viewModel.clearSearch()
+    }
+
+    func resetToExplore() {
+        searchTask?.cancel()
+        viewModel.resetToExplore()
+    }
+
+    func searchCategory(_ category: String) {
+        if destinationText != category {
+            isProgrammaticTextChange = true
+            destinationText = category
         }
-        return ContentView.defaultAlaskaCoordinate
+        viewModel.searchCategory(category)
+    }
+
+    func updateCurrentStepForLiveLocation(_ userCoord: CLLocationCoordinate2D, in details: RouteDetails) {
+        viewModel.updateCurrentStepForLiveLocation(userCoord, in: details)
+    }
+
+    func updateNavigationTelemetry(at userCoord: CLLocationCoordinate2D, coordIndex: Int, in details: RouteDetails) {
+        viewModel.updateNavigationTelemetry(at: userCoord, coordIndex: coordIndex, in: details)
+    }
+
+    func advanceSimulationStep() {
+        viewModel.advanceSimulationStep()
+    }
+
+    func handleLocationUpdate(_ location: CLLocation?) {
+        guard let location = location else { return }
+        guard isWithinSupportedRegion(location.coordinate) else { return }
+        viewModel.handleLocationUpdate(location)
+    }
+
+    func handleQueryChange(_ query: String) {
+        searchTask?.cancel()
+        viewModel.handleQueryChange(query)
+    }
+
+    func selectPlace(_ place: SearchResult) {
+        viewModel.selectPlace(place)
+    }
+
+    func calculateRouteTo(_ place: SearchResult, completion: (@MainActor @Sendable () -> Void)? = nil) {
+        viewModel.calculateRouteTo(place, completion: completion)
+    }
+
+    func switchTravelMode(_ mode: String) {
+        viewModel.switchTravelMode(mode)
+    }
+
+    func startNavigation() {
+        viewModel.startNavigation()
+    }
+
+    func startSimulatedDrive() {
+        viewModel.startSimulatedDrive()
+    }
+
+    func endNavigation() {
+        viewModel.endNavigation()
+    }
+
+    func recenterOnUser() {
+        viewModel.recenterOnUser()
+    }
+
+    func toggleVoiceMute() {
+        viewModel.toggleVoiceMute()
+    }
+
+    func checkMapDataMissing() {
+        viewModel.checkMapDataMissing()
     }
 
     var body: some View {
@@ -146,13 +277,13 @@ struct ContentView: View {
             MapView(
                 pmtilesURL: OfflineDataManager.url(for: "north-america.pmtiles"),
                 destinationTitle: selectedPlace?.name ?? destinationText,
-                selectedCoordinate: $selectedCoordinate,
-                routeCoordinates: $routeCoordinates,
-                simulatedUserCoordinate: $simulatedUserCoordinate,
-                userLocationCenter: $userLocationCenter,
-                zoomStep: $zoomStep,
-                simulatedHeading: simulatedHeading,
-                isNavigating: isNavigating,
+                selectedCoordinate: $viewModel.selectedCoordinate,
+                routeCoordinates: $viewModel.routeCoordinates,
+                simulatedUserCoordinate: $viewModel.simulatedUserCoordinate,
+                userLocationCenter: $viewModel.userLocationCenter,
+                zoomStep: $viewModel.zoomStep,
+                simulatedHeading: viewModel.simulatedHeading,
+                isNavigating: viewModel.isNavigating,
                 mapStyleName: "standard",
                 onMapTap: {
                     if appMode == .searchList {
@@ -160,7 +291,7 @@ struct ContentView: View {
                     }
                 },
                 onLongPressCoordinate: { coord in
-                    handleMapLongPress(at: coord)
+                    viewModel.handleMapLongPress(at: coord)
                 }
             )
             .ignoresSafeArea()
@@ -196,16 +327,15 @@ struct ContentView: View {
         .animation(.easeInOut(duration: 0.25), value: appMode)
         .animation(.easeInOut(duration: 0.25), value: isNavigating)
         .animation(.easeInOut(duration: 0.25), value: isHudMode)
-        .sheet(isPresented: $showStepsSheet) {
+        .sheet(isPresented: $viewModel.showStepsSheet) {
             if let details = routeDetails {
                 NavigationStepsSheet(routeDetails: details, currentStepIndex: currentStepIndex, useMetric: useMetric)
             }
         }
         .task {
-            let pmtilesPath = OfflineDataManager.url(for: "north-america.pmtiles").path
-            self.isMapDataMissing = !FileManager.default.fileExists(atPath: pmtilesPath)
+            checkMapDataMissing()
         }
-        .alert("Notice", isPresented: $showErrorAlert) {
+        .alert("Notice", isPresented: $viewModel.showErrorAlert) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(errorMessage ?? "An error occurred.")
@@ -215,10 +345,10 @@ struct ContentView: View {
         } message: {
             Text("• Map Data: © OpenStreetMap contributors (ODbL 1.0) & © OpenMapTiles (CC-BY 4.0)\n• Rendering: MapLibre GL Native (BSD 2-Clause)\n• Routing: Valhalla (MIT)\n• Database: SQLite.swift (MIT)\n• Terrain: Natural Earth (Public Domain)\n\nAll data and algorithms operate 100% offline. See THIRD_PARTY_NOTICES.md for complete copyright and license details.")
         }
-        .onReceive(locationManager.$location) { newLoc in
+        .onReceive(viewModel.locationManager.$location) { newLoc in
             handleLocationUpdate(newLoc)
         }
-        .onChange(of: useMetric) { _, _ in
+        .onChange(of: viewModel.useMetric) { _, _ in
             if !isNavigating && !isSimulating {
                 if let dest = selectedCoordinate, routeDetails != nil {
                     let place = selectedPlace ?? SearchResult(id: 0, name: destinationText, lat: dest.latitude, lon: dest.longitude)
@@ -231,25 +361,26 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - 1. Top Search Header (Google Maps Style)
+    // MARK: - 1. Top Search Header & Category Chips (Google Maps Floating Style)
     private var topSearchHeader: some View {
         VStack(spacing: 8) {
             HStack(spacing: 10) {
-                if appMode == .placeDetail || appMode == .routePreview || appMode == .searchList {
-                    Button(action: resetToExplore) {
-                        Image(systemName: "arrow.backward")
-                            .font(.system(size: 16, weight: .semibold))
+                if appMode == .searchList || selectedPlace != nil {
+                    Button(action: {
+                        dismissSearch()
+                    }) {
+                        Image(systemName: "arrow.left")
+                            .font(.system(size: 17, weight: .semibold))
                             .foregroundColor(.primary)
-                            .padding(8)
+                            .frame(width: 32, height: 32)
                     }
                 } else {
                     Image(systemName: "magnifyingglass")
-                        .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.gray)
-                        .padding(.leading, 6)
+                        .frame(width: 28, height: 28)
                 }
 
-                TextField("Search here", text: $destinationText)
+                TextField("Search here", text: $viewModel.destinationText)
                     .font(.body)
                     .autocorrectionDisabled()
                     .onChange(of: destinationText) { _, newValue in
@@ -262,34 +393,38 @@ struct ContentView: View {
                         }
                         handleQueryChange(newValue)
                     }
-                    .onSubmit {
-                        if !searchResults.isEmpty {
-                            selectPlace(searchResults[0])
-                        }
-                    }
 
                 if isSearching {
                     ProgressView()
                         .scaleEffect(0.8)
-                        .padding(.trailing, 4)
+                        .frame(width: 24, height: 24)
                 } else if !destinationText.isEmpty {
-                    Button(action: clearSearch) {
+                    Button(action: {
+                        clearSearch()
+                    }) {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundColor(.gray)
-                            .padding(.trailing, 4)
                     }
                 }
+
+                Button(action: {
+                    showAttributionAlert = true
+                }) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 18))
+                        .foregroundColor(.secondary)
+                }
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .background(Color(.systemBackground))
-            .cornerRadius(28)
-            .shadow(color: Color.black.opacity(0.15), radius: 6, x: 0, y: 3)
+            .cornerRadius(24)
+            .shadow(color: Color.black.opacity(0.15), radius: 6, x: 0, y: 2)
             .padding(.horizontal, 16)
-            .padding(.top, 6)
+            .padding(.top, 4)
 
-            // Category Chips Carousel
-            if appMode == .explore || appMode == .searchList {
+            // Category Chips Carousel (horizontal scroll)
+            if appMode == .explore {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         CategoryChip(icon: "fuelpump.fill", title: "Gas", color: .orange) {
@@ -298,20 +433,23 @@ struct ContentView: View {
                         CategoryChip(icon: "cup.and.saucer.fill", title: "Coffee", color: .brown) {
                             searchCategory("Coffee")
                         }
-                        CategoryChip(icon: "fork.knife", title: "Restaurants", color: .red) {
+                        CategoryChip(icon: "fork.knife", title: "Food", color: .red) {
                             searchCategory("Restaurant")
                         }
                         CategoryChip(icon: "cart.fill", title: "Groceries", color: .green) {
-                            searchCategory("Market")
+                            searchCategory("Groceries")
                         }
                         CategoryChip(icon: "parkingsign.circle.fill", title: "Parking", color: .blue) {
                             searchCategory("Parking")
                         }
-                        CategoryChip(icon: "bed.double.fill", title: "Hotels", color: .purple) {
+                        CategoryChip(icon: "bed.double.fill", title: "Hotels", color: .indigo) {
                             searchCategory("Hotel")
                         }
-                        CategoryChip(icon: "cross.case.fill", title: "Hospitals", color: .pink) {
+                        CategoryChip(icon: "cross.fill", title: "Hospitals", color: .red) {
                             searchCategory("Hospital")
+                        }
+                        CategoryChip(icon: "tree.fill", title: "Parks", color: .teal) {
+                            searchCategory("Park")
                         }
                     }
                     .padding(.horizontal, 16)
@@ -321,51 +459,14 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - Status & Hardware Alerts Banner (No GPS / Wi-Fi iPad / Missing Data)
+    // MARK: - 2. Persistent Offline Status & GPS Alert Banner
     @ViewBuilder
     private var statusAlertBanner: some View {
-        if locationManager.authorizationStatus == .denied || locationManager.authorizationStatus == .restricted {
+        if locationManager.isGpsSignalLow {
             HStack(spacing: 8) {
                 Image(systemName: "location.slash.fill")
-                    .foregroundColor(.orange)
-                Text("Location Access Disabled. Tap to open Settings.")
-                    .font(.caption.weight(.medium))
-                    .foregroundColor(.primary)
-                Spacer()
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background(.ultraThinMaterial)
-            .cornerRadius(8)
-            .padding(.horizontal, 16)
-            .padding(.top, 4)
-            .onTapGesture {
-                if let url = URL(string: UIApplication.openSettingsURLString) {
-                    UIApplication.shared.open(url)
-                }
-            }
-        } else if locationManager.accuracyAuthorization == .reducedAccuracy {
-            HStack(spacing: 8) {
-                Image(systemName: "location.circle")
-                    .foregroundColor(.blue)
-                Text("Approximate location only. Tap for precision.")
-                    .font(.caption.weight(.medium))
-                Spacer()
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background(.ultraThinMaterial)
-            .cornerRadius(8)
-            .padding(.horizontal, 16)
-            .padding(.top, 4)
-            .onTapGesture {
-                locationManager.requestPreciseLocation()
-            }
-        } else if locationManager.isGpsSignalLow && !isSimulating {
-            HStack(spacing: 8) {
-                Image(systemName: "antenna.radiowaves.left.and.right.slash")
-                    .foregroundColor(.orange)
-                Text("Weak GPS Signal / Wi-Fi Device")
+                    .foregroundColor(.yellow)
+                Text("Weak GPS signal. Routing and speedometer may be degraded.")
                     .font(.caption.weight(.medium))
                 Spacer()
             }
@@ -384,69 +485,12 @@ struct ContentView: View {
                 Spacer()
             }
             .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background(.ultraThinMaterial)
-            .cornerRadius(8)
-            .padding(.horizontal, 16)
-            .padding(.top, 4)
-        } else if let user = locationManager.location?.coordinate, !isWithinSupportedRegion(user) {
-            HStack(spacing: 8) {
-                Image(systemName: "mappin.and.ellipse")
-                    .foregroundColor(.blue)
-                Text("Simulated Location: Fairbanks, AK (Offline Region)")
-                    .font(.caption.weight(.medium))
-                Spacer()
-            }
-            .padding(.horizontal, 14)
             .padding(.vertical, 6)
             .background(.ultraThinMaterial)
             .cornerRadius(8)
             .padding(.horizontal, 16)
             .padding(.top, 4)
         }
-    }
-
-    // MARK: - 2. Search Results List
-    private var searchResultsDropdown: some View {
-        List(searchResults) { result in
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(Color(.systemGray5))
-                        .frame(width: 38, height: 38)
-                    Image(systemName: result.iconName)
-                        .font(.system(size: 16))
-                        .foregroundColor(.blue)
-                }
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(result.name)
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(.primary)
-                        .lineLimit(1)
-                    Text(result.formattedDistance(from: effectiveUserCoordinate, useMetric: useMetric))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-
-                Spacer()
-                Image(systemName: "arrow.up.left")
-                    .font(.caption)
-                    .foregroundColor(.gray)
-            }
-            .padding(.vertical, 4)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                selectPlace(result)
-            }
-        }
-        .listStyle(.plain)
-        .frame(maxHeight: 280)
-        .background(Color(.systemBackground))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.18), radius: 8, x: 0, y: 4)
-        .padding(.horizontal, 16)
-        .padding(.top, 4)
     }
 
     // MARK: - 3. Active Turn-by-Turn Top Banner (Google Maps Dark Green)
@@ -459,25 +503,28 @@ struct ContentView: View {
                     .foregroundColor(.white)
                     .frame(width: 44)
 
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(formatCountdownDistance(remainingStepDistanceMiles, useMetric: useMetric))
-                        .font(.system(size: 24, weight: .heavy))
+                        .font(.system(size: 26, weight: .heavy, design: .rounded))
                         .foregroundColor(.white)
+
                     Text(step.instruction)
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(Color.white.opacity(0.92))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.white.opacity(0.95))
                         .lineLimit(2)
+
+                    if let street = step.streetName, !street.isEmpty {
+                        Text(street)
+                            .font(.caption2)
+                            .foregroundColor(.white.opacity(0.75))
+                    }
                 }
 
                 Spacer()
 
                 // Voice Mute Toggle
                 Button(action: {
-                    isVoiceMuted.toggle()
-                    routingService.isVoiceMuted = isVoiceMuted
-                    if isVoiceMuted {
-                        routingService.stopVoice()
-                    }
+                    toggleVoiceMute()
                 }) {
                     Image(systemName: isVoiceMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
                         .font(.system(size: 14))
@@ -487,8 +534,10 @@ struct ContentView: View {
                         .clipShape(Circle())
                 }
 
-                // Exit Navigation
-                Button(action: endNavigation) {
+                // Close / End Navigation Button
+                Button(action: {
+                    endNavigation()
+                }) {
                     Image(systemName: "xmark")
                         .font(.system(size: 14, weight: .bold))
                         .foregroundColor(.white)
@@ -497,9 +546,9 @@ struct ContentView: View {
                         .clipShape(Circle())
                 }
             }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 14)
-            .background(Color(red: 0.05, green: 0.42, blue: 0.22))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color(red: 0.05, green: 0.50, blue: 0.22)) // Google Maps Navigation Green
             .cornerRadius(18)
             .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
             .padding(.horizontal, 14)
@@ -507,332 +556,401 @@ struct ContentView: View {
         }
     }
 
-    private var currentNavigationStep: NavigationStep {
-        guard let steps = routeDetails?.steps, !steps.isEmpty else {
-            return NavigationStep(
-                instruction: "Proceed along route",
-                distanceMiles: 0.5,
-                durationSeconds: 60,
-                maneuverType: 1,
-                streetName: nil,
-                startIndex: 0,
-                endIndex: 1
-            )
-        }
-        let safeIndex = min(currentStepIndex, steps.count - 1)
-        return steps[safeIndex]
-    }
+    // MARK: - 4. Search Results Dropdown List
+    private var searchResultsDropdown: some View {
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                ForEach(searchResults) { result in
+                    Button(action: {
+                        selectPlace(result)
+                    }) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "mappin.circle.fill")
+                                .font(.title3)
+                                .foregroundColor(.red)
 
-    // MARK: - 4. Bottom Controls Area
-    private var bottomControlsArea: some View {
-        VStack(spacing: 12) {
-            // Floating Right Map Controls
-            if !isNavigating {
-                HStack {
-                    // Attribution pill (ODbL License compliance)
-                    Button(action: { showAttributionAlert = true }) {
-                        Text("© OSM")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(.secondary)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color(.systemBackground).opacity(0.85))
-                            .cornerRadius(10)
-                    }
-                    .padding(.leading, 16)
-
-                    Spacer()
-
-                    VStack(spacing: 10) {
-                        // Zoom in / out buttons
-                        VStack(spacing: 0) {
-                            Button(action: { zoomStep = 1.0 }) {
-                                Image(systemName: "plus")
-                                    .font(.system(size: 16, weight: .semibold))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(result.name)
+                                    .font(.body)
                                     .foregroundColor(.primary)
-                                    .frame(width: 40, height: 38)
+                                    .lineLimit(1)
+                                Text(result.category)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
                             }
-                            Divider()
-                                .frame(width: 28)
-                            Button(action: { zoomStep = -1.0 }) {
-                                Image(systemName: "minus")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(.primary)
-                                    .frame(width: 40, height: 38)
-                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption2)
+                                .foregroundColor(.tertiaryLabel)
                         }
-                        .background(Color(.systemBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                        .shadow(color: Color.black.opacity(0.15), radius: 4)
-
-                        // Units toggle (mph / km/h)
-                        Button(action: { useMetric.toggle() }) {
-                            Text(useMetric ? "KM" : "MI")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundColor(.primary)
-                                .frame(width: 40, height: 40)
-                                .background(Color(.systemBackground))
-                                .clipShape(Circle())
-                                .shadow(color: Color.black.opacity(0.15), radius: 4)
-                        }
-
-                        // Recenter on user
-                        Button(action: recenterOnUser) {
-                            Image(systemName: "location.fill")
-                                .font(.system(size: 18))
-                                .foregroundColor(.blue)
-                                .frame(width: 40, height: 40)
-                                .background(Color(.systemBackground))
-                                .clipShape(Circle())
-                                .shadow(color: Color.black.opacity(0.15), radius: 4)
-                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
                     }
-                    .padding(.trailing, 16)
+                    Divider().padding(.leading, 44)
                 }
             }
-
-            switch appMode {
-            case .explore, .searchList:
-                exploreBottomBar
-            case .placeDetail:
-                placeDetailCard
-            case .routePreview:
-                routePreviewCard
-            case .navigation:
-                navigationBottomHUD
-            }
+            .background(Color(.systemBackground))
+            .cornerRadius(16)
+            .shadow(color: Color.black.opacity(0.12), radius: 6, x: 0, y: 2)
+            .padding(.horizontal, 16)
         }
-        .padding(.bottom, 20)
+        .frame(maxHeight: 280)
     }
 
+    // MARK: - 5. Bottom Controls Area (Mode Sensitive)
+    @ViewBuilder
+    private var bottomControlsArea: some View {
+        switch appMode {
+        case .explore, .searchList:
+            exploreBottomBar
+        case .placeDetail:
+            placeDetailCard
+        case .routePreview:
+            routePreviewCard
+        case .navigation:
+            activeNavigationControls
+        }
+    }
+
+    // Explore / Map Floating Action Buttons (FABs)
     private var exploreBottomBar: some View {
-        HStack(spacing: 12) {
-            DashboardGauge(title: "SPEED", value: "\(displaySpeed)", unit: speedUnit)
-            DashboardGauge(title: "ALT", value: "\(altitudeValue)", unit: altitudeUnit)
-            Spacer()
+        VStack(spacing: 10) {
+            HStack(alignment: .bottom) {
+                // Live Speedometer and Elevation Gauges
+                HStack(spacing: 8) {
+                    DashboardGauge(
+                        title: "SPEED",
+                        value: "\(displaySpeed)",
+                        unit: speedUnit
+                    )
+                    DashboardGauge(
+                        title: "ELEVATION",
+                        value: "\(altitudeValue)",
+                        unit: altitudeUnit
+                    )
+                }
+                Spacer()
+
+                // Map Control Buttons (Recenter, Zoom, Unit toggle)
+                VStack(spacing: 8) {
+                    Button(action: {
+                        recenterOnUser()
+                    }) {
+                        Image(systemName: "location.fill")
+                            .font(.system(size: 16))
+                            .foregroundColor(.blue)
+                            .frame(width: 44, height: 44)
+                            .background(Color(.systemBackground))
+                            .clipShape(Circle())
+                            .shadow(color: Color.black.opacity(0.15), radius: 4)
+                    }
+
+                    VStack(spacing: 0) {
+                        Button(action: { zoomStep = 1.0 }) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 15, weight: .bold))
+                                .frame(width: 44, height: 40)
+                        }
+                        Divider().frame(width: 28)
+                        Button(action: { zoomStep = -1.0 }) {
+                            Image(systemName: "minus")
+                                .font(.system(size: 15, weight: .bold))
+                                .frame(width: 44, height: 40)
+                        }
+                    }
+                    .background(Color(.systemBackground))
+                    .cornerRadius(12)
+                    .shadow(color: Color.black.opacity(0.15), radius: 4)
+
+                    // Unit Toggle Pill (mph vs km/h)
+                    Button(action: {
+                        useMetric.toggle()
+                    }) {
+                        Text(useMetric ? "KM" : "MI")
+                            .font(.caption2.weight(.bold))
+                            .foregroundColor(.primary)
+                            .frame(width: 44, height: 28)
+                            .background(Color(.systemBackground))
+                            .cornerRadius(8)
+                            .shadow(color: Color.black.opacity(0.12), radius: 3)
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 20)
         }
-        .padding(.horizontal, 16)
     }
 
+    // Place Detail Bottom Sheet
     private var placeDetailCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             if let place = selectedPlace {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(place.name)
-                            .font(.system(size: 19, weight: .bold))
-                            .foregroundColor(.primary)
-                            .lineLimit(2)
-                        Text(place.formattedDistance(from: effectiveUserCoordinate, useMetric: useMetric))
+                            .font(.title3)
+                            .bold()
+                        Text(place.category)
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
                     Spacer()
-                    Button(action: resetToExplore) {
+                    Button(action: {
+                        resetToExplore()
+                    }) {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 22))
+                            .font(.title3)
                             .foregroundColor(.gray)
                     }
                 }
 
-                HStack(spacing: 12) {
-                    Button(action: { calculateRouteTo(place) }) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
-                            Text("Directions").bold()
-                        }
-                        .font(.subheadline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Color.blue)
-                        .cornerRadius(24)
+                // Travel mode selector
+                HStack(spacing: 20) {
+                    TravelModeTab(icon: "car.fill", title: "Drive", isSelected: selectedTravelMode == "auto") {
+                        switchTravelMode("auto")
                     }
+                    TravelModeTab(icon: "figure.walk", title: "Walk", isSelected: selectedTravelMode == "pedestrian") {
+                        switchTravelMode("pedestrian")
+                    }
+                    TravelModeTab(icon: "bicycle", title: "Bicycle", isSelected: selectedTravelMode == "bicycle") {
+                        switchTravelMode("bicycle")
+                    }
+                    Spacer()
+                }
+                .padding(.top, 4)
 
-                    Button(action: {
-                        calculateRouteTo(place) {
-                            self.startNavigation()
-                        }
-                    }) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "play.fill")
-                            Text("Start").bold()
-                        }
-                        .font(.subheadline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Color(red: 0.1, green: 0.6, blue: 0.3))
-                        .cornerRadius(24)
+                // Directions CTA Button
+                Button(action: {
+                    calculateRouteTo(place)
+                }) {
+                    HStack {
+                        Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
+                        Text("Directions")
+                            .fontWeight(.semibold)
                     }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 13)
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(12)
                 }
             }
         }
         .padding(18)
         .background(Color(.systemBackground))
         .cornerRadius(20)
-        .shadow(color: Color.black.opacity(0.18), radius: 10, x: 0, y: 4)
-        .padding(.horizontal, 16)
+        .shadow(color: Color.black.opacity(0.18), radius: 10, y: -2)
+        .padding(.horizontal, 12)
+        .padding(.bottom, 10)
     }
 
+    // Route Preview Card
     private var routePreviewCard: some View {
-        VStack(spacing: 14) {
-            HStack(spacing: 24) {
-                TravelModeTab(icon: "car.fill", title: "Drive", isSelected: selectedTravelMode == "auto") {
-                    switchTravelMode("auto")
-                }
-                TravelModeTab(icon: "figure.walk", title: "Walk", isSelected: selectedTravelMode == "pedestrian") {
-                    switchTravelMode("pedestrian")
-                }
-                TravelModeTab(icon: "bicycle", title: "Bike", isSelected: selectedTravelMode == "bicycle") {
-                    switchTravelMode("bicycle")
-                }
-            }
-            .padding(.top, 4)
-
-            Divider()
-
+        VStack(spacing: 12) {
             if let details = routeDetails {
-                HStack(alignment: .firstTextBaseline) {
+                HStack(alignment: .center) {
                     VStack(alignment: .leading, spacing: 2) {
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
                             Text(details.formattedDuration)
-                                .font(.system(size: 26, weight: .heavy))
+                                .font(.title2)
+                                .bold()
                                 .foregroundColor(Color(red: 0.05, green: 0.6, blue: 0.25))
-                            Text(details.formattedDistance(useMetric: useMetric))
-                                .font(.title3)
+                            Text("(\(details.formattedDistance(useMetric: useMetric)))")
+                                .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
-                        Text("Arrive by \(details.formattedETA)")
+                        Text("Fastest route via offline network")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
                     Spacer()
+
+                    Button(action: {
+                        resetToExplore()
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title3)
+                            .foregroundColor(.gray)
+                    }
                 }
 
+                // Travel mode tabs
+                HStack(spacing: 20) {
+                    TravelModeTab(icon: "car.fill", title: "Drive", isSelected: selectedTravelMode == "auto") {
+                        switchTravelMode("auto")
+                    }
+                    TravelModeTab(icon: "figure.walk", title: "Walk", isSelected: selectedTravelMode == "pedestrian") {
+                        switchTravelMode("pedestrian")
+                    }
+                    TravelModeTab(icon: "bicycle", title: "Bicycle", isSelected: selectedTravelMode == "bicycle") {
+                        switchTravelMode("bicycle")
+                    }
+                    Spacer()
+                }
+
+                // Action CTA Buttons (Start Navigation vs Simulation vs Steps)
                 HStack(spacing: 10) {
-                    Button(action: startNavigation) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "location.north.fill")
-                            Text("Start").bold()
+                    Button(action: {
+                        startNavigation()
+                    }) {
+                        HStack {
+                            Image(systemName: "location.fill")
+                            Text("Start")
+                                .fontWeight(.bold)
                         }
-                        .font(.headline)
-                        .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color(red: 0.1, green: 0.6, blue: 0.3))
-                        .cornerRadius(26)
+                        .padding(.vertical, 13)
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
                     }
 
-                    Button(action: startSimulatedDrive) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "car.fill")
+                    Button(action: {
+                        startSimulatedDrive()
+                    }) {
+                        HStack {
+                            Image(systemName: "play.circle.fill")
                             Text("Simulate")
+                                .fontWeight(.semibold)
                         }
-                        .font(.subheadline)
-                        .foregroundColor(.blue)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(26)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 13)
+                        .background(Color(.systemGray5))
+                        .foregroundColor(.primary)
+                        .cornerRadius(12)
                     }
 
-                    Button(action: { showStepsSheet = true }) {
+                    Button(action: {
+                        showStepsSheet = true
+                    }) {
                         Image(systemName: "list.bullet")
-                            .font(.headline)
+                            .font(.system(size: 16, weight: .bold))
+                            .frame(width: 44, height: 44)
+                            .background(Color(.systemGray5))
                             .foregroundColor(.primary)
-                            .padding(14)
-                            .background(Color(.systemGray6))
-                            .clipShape(Circle())
+                            .cornerRadius(12)
                     }
                 }
             } else {
-                HStack {
+                HStack(spacing: 12) {
                     ProgressView()
                     Text("Calculating fastest offline route...")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
+                    Spacer()
                 }
-                .padding(.vertical, 10)
+                .padding(.vertical, 8)
             }
         }
         .padding(18)
         .background(Color(.systemBackground))
-        .cornerRadius(22)
-        .shadow(color: Color.black.opacity(0.18), radius: 10, x: 0, y: 4)
-        .padding(.horizontal, 16)
+        .cornerRadius(20)
+        .shadow(color: Color.black.opacity(0.18), radius: 10, y: -2)
+        .padding(.horizontal, 12)
+        .padding(.bottom, 10)
     }
 
-    private var navigationBottomHUD: some View {
+    // Active Navigation Bottom Controls (ETA, distance, simulation speeds, HUD toggle)
+    private var activeNavigationControls: some View {
         VStack(spacing: 10) {
-            if routeDetails != nil {
+            HStack(alignment: .bottom) {
+                // Live Speedometer and Elevation Gauges
+                HStack(spacing: 8) {
+                    DashboardGauge(
+                        title: "SPEED",
+                        value: "\(displaySpeed)",
+                        unit: speedUnit
+                    )
+                    DashboardGauge(
+                        title: "ELEVATION",
+                        value: "\(altitudeValue)",
+                        unit: altitudeUnit
+                    )
+                }
+
+                Spacer()
+
+                // Windshield HUD Mode Toggle Button
+                Button(action: {
+                    isHudMode = true
+                }) {
+                    VStack(spacing: 2) {
+                        Image(systemName: "car.window.right")
+                            .font(.system(size: 16, weight: .bold))
+                        Text("HUD")
+                            .font(.system(size: 9, weight: .heavy))
+                    }
+                    .foregroundColor(.white)
+                    .frame(width: 44, height: 44)
+                    .background(Color.black.opacity(0.85))
+                    .cornerRadius(12)
+                    .shadow(color: Color.black.opacity(0.2), radius: 4)
+                }
+
+                // Recenter Camera FAB
+                Button(action: {
+                    recenterOnUser()
+                }) {
+                    Image(systemName: "location.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(.blue)
+                        .frame(width: 44, height: 44)
+                        .background(Color(.systemBackground))
+                        .clipShape(Circle())
+                        .shadow(color: Color.black.opacity(0.15), radius: 4)
+                }
+            }
+            .padding(.horizontal, 16)
+
+            // Main Bottom Navigation Bar (Google Maps style bottom panel)
+            VStack(spacing: 8) {
                 HStack(alignment: .center) {
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(alignment: .firstTextBaseline, spacing: 6) {
-                            Text(formattedRemainingDuration)
-                                .font(.system(size: 22, weight: .bold))
+                            Text(formattedRemainingETA)
+                                .font(.title3)
+                                .bold()
                                 .foregroundColor(Color(red: 0.05, green: 0.6, blue: 0.25))
-                            Text("• \(formatCountdownDistance(remainingRouteDistanceMiles, useMetric: useMetric))")
+
+                            Text("•  \(formattedRemainingDuration)")
+                                .font(.subheadline)
+                                .foregroundColor(.primary)
+
+                            Text("•  \(formatCountdownDistance(remainingRouteDistanceMiles, useMetric: useMetric))")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
-                        Text("ETA \(formattedRemainingETA)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+
+                        if let steps = routeDetails?.steps {
+                            Text("Step \(min(currentStepIndex + 1, steps.count)) of \(steps.count)")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
                     }
 
                     Spacer()
 
-                    // HUD Mirror Mode Toggle
-                    Button(action: { isHudMode.toggle() }) {
-                        Image(systemName: "arrow.left.and.right.righttriangle.left.righttriangle.right")
-                            .font(.system(size: 14))
-                            .foregroundColor(.primary)
-                            .padding(8)
-                            .background(Color(.systemGray6))
-                            .clipShape(Circle())
-                    }
-
-                    // Speedometer Badge
-                    HStack(spacing: 4) {
-                        Text("\(displaySpeed)")
-                            .font(.system(size: 20, weight: .heavy))
-                        Text(speedUnit)
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(12)
-
-                    // Steps Drawer Button
-                    Button(action: { showStepsSheet = true }) {
-                        Image(systemName: "list.bullet")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.primary)
-                            .padding(10)
-                            .background(Color(.systemGray6))
-                            .clipShape(Circle())
-                    }
-
-                    // Exit Navigation Button
-                    Button(action: endNavigation) {
+                    // End Navigation Button (Red Circle with X)
+                    Button(action: {
+                        endNavigation()
+                    }) {
                         Image(systemName: "xmark")
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.system(size: 16, weight: .bold))
                             .foregroundColor(.white)
-                            .padding(10)
+                            .frame(width: 38, height: 38)
                             .background(Color.red)
                             .clipShape(Circle())
                     }
                 }
 
+                // Simulation Speed Toggle Toolbar (when running in simulation)
                 if isSimulating {
-                    HStack(spacing: 8) {
-                        Text("Simulation Demo:")
+                    Divider()
+                    HStack(spacing: 12) {
+                        Text("Simulation:")
                             .font(.caption2)
                             .foregroundColor(.secondary)
-                        Spacer()
+
                         SimulationSpeedButton(label: "1x", isSelected: simulationSpeedMultiplier == 1.0) {
                             simulationSpeedMultiplier = 1.0
                         }
@@ -842,554 +960,93 @@ struct ContentView: View {
                         SimulationSpeedButton(label: "5x", isSelected: simulationSpeedMultiplier == 5.0) {
                             simulationSpeedMultiplier = 5.0
                         }
+
+                        Spacer()
+
+                        Button(action: {
+                            showStepsSheet = true
+                        }) {
+                            Text("Steps")
+                                .font(.caption2.weight(.medium))
+                                .foregroundColor(.blue)
+                        }
                     }
-                    .padding(.top, 2)
                 }
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color(.systemBackground))
+            .cornerRadius(18)
+            .shadow(color: Color.black.opacity(0.18), radius: 8, y: -2)
+            .padding(.horizontal, 12)
+            .padding(.bottom, 10)
         }
-        .padding(16)
-        .background(Color(.systemBackground))
-        .cornerRadius(20)
-        .shadow(color: Color.black.opacity(0.18), radius: 10, x: 0, y: 4)
-        .padding(.horizontal, 16)
     }
 
-    // MARK: - 5. HUD Windshield Reflection Mode (Pure OLED Black & Flipped)
+    // MARK: - 6. HUD Windshield Reflection View (OLED Pure Black with Inverted Text)
     private var hudWindshieldView: some View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            VStack(spacing: 30) {
+            VStack(spacing: 24) {
                 HStack {
-                    Spacer()
                     Button(action: { isHudMode = false }) {
-                        Image(systemName: "xmark")
-                            .font(.title2)
-                            .foregroundColor(.white)
-                            .padding()
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 28))
+                            .foregroundColor(.gray)
                     }
+                    Spacer()
+                    Text("WINDSHIELD HUD")
+                        .font(.caption.weight(.bold))
+                        .foregroundColor(.gray)
                 }
+                .padding(.horizontal, 24)
+                .padding(.top, 16)
 
                 Spacer()
 
+                // Huge Maneuver Arrow & Countdown Distance
                 let step = currentNavigationStep
                 Image(systemName: step.iconName)
                     .font(.system(size: 100, weight: .bold))
                     .foregroundColor(Color(red: 0.2, green: 0.8, blue: 0.4))
 
                 Text(formatCountdownDistance(remainingStepDistanceMiles, useMetric: useMetric))
-                    .font(.system(size: 56, weight: .heavy))
+                    .font(.system(size: 64, weight: .heavy, design: .rounded))
                     .foregroundColor(.white)
 
                 Text(step.instruction)
-                    .font(.title2)
+                    .font(.title2.weight(.semibold))
+                    .foregroundColor(.white.opacity(0.9))
                     .multilineTextAlignment(.center)
-                    .foregroundColor(.white)
-                    .padding(.horizontal)
+                    .padding(.horizontal, 32)
 
+                Spacer()
+
+                // Speedometer & ETA Display
                 HStack(spacing: 40) {
-                    VStack {
+                    VStack(spacing: 4) {
                         Text("\(displaySpeed)")
-                            .font(.system(size: 64, weight: .black))
+                            .font(.system(size: 56, weight: .heavy, design: .rounded))
                             .foregroundColor(.white)
                         Text(speedUnit.uppercased())
-                            .font(.headline)
+                            .font(.caption.weight(.bold))
                             .foregroundColor(.gray)
                     }
-                    if routeDetails != nil {
-                        VStack {
-                            Text(formattedRemainingETA)
-                                .font(.system(size: 40, weight: .bold))
-                                .foregroundColor(.green)
-                            Text("ARRIVAL")
-                                .font(.headline)
-                                .foregroundColor(.gray)
-                        }
+
+                    VStack(spacing: 4) {
+                        Text(formattedRemainingETA)
+                            .font(.system(size: 36, weight: .bold, design: .rounded))
+                            .foregroundColor(Color(red: 0.2, green: 0.8, blue: 0.4))
+                        Text(formattedRemainingDuration)
+                            .font(.caption.weight(.bold))
+                            .foregroundColor(.gray)
                     }
                 }
 
                 Spacer()
             }
             .scaleEffect(x: -1.0, y: 1.0) // Horizontally mirror for windshield reflection
-        }
-    }
-
-    // MARK: - Logic & Actions
-
-    func handleLocationUpdate(_ location: CLLocation?) {
-        guard let location = location, isNavigating, let details = routeDetails, let coords = routeCoordinates else { return }
-
-        // Skip off-route checks during simulation
-        if isSimulating {
-            return
-        }
-
-        // Ignore out-of-region fixes to avoid overriding Alaska fallback and breaking rerouting
-        guard isWithinSupportedRegion(location.coordinate) else { return }
-
-        // Live real GPS driving updates
-        simulatedUserCoordinate = location.coordinate
-        if location.course >= 0 {
-            simulatedHeading = location.course
-        } else if locationManager.heading >= 0 {
-            simulatedHeading = locationManager.heading
-        }
-
-        // Step progression along route maneuvers & live countdown telemetry
-        updateCurrentStepForLiveLocation(location.coordinate, in: details)
-
-        // Off-route check with in-progress guard and exponential backoff on failures
-        guard !isRecalculating else { return }
-        let now = Date()
-        let cooldown = 7.0 * pow(2.0, Double(min(consecutiveRerouteFailures, 4)))
-        guard now.timeIntervalSince(lastRerouteTime) > cooldown else { return }
-
-        // Scale threshold by horizontal accuracy (at least 40m, up to 75m in urban canyons)
-        let baseThreshold = 40.0
-        let accuracySlack = max(0.0, location.horizontalAccuracy - 20.0)
-        let effectiveThreshold = min(75.0, baseThreshold + accuracySlack)
-
-        let isOff = routingService.isUserOffRoute(
-            userLocation: location.coordinate,
-            routeCoordinates: coords,
-            thresholdMeters: effectiveThreshold,
-            activeCoordIndex: currentCoordIndex
-        )
-        if isOff, let dest = selectedCoordinate {
-            print("ContentView: Off-route detected! Recalculating route...")
-            lastRerouteTime = now
-            routingService.speakTurnInstruction("Recalculating route.", force: true)
-            recalculateActiveRoute(to: dest)
-        }
-    }
-
-    func updateCurrentStepForLiveLocation(_ userCoord: CLLocationCoordinate2D, in details: RouteDetails) {
-        let coords = details.coordinates
-        guard !coords.isEmpty else { return }
-
-        // Live arrival check at destination
-        if let finalDest = coords.last, coords.count >= 2 {
-            let distToFinalDest = segmentDistanceMeters(p1: userCoord, p2: finalDest)
-            let isNearEnd = currentCoordIndex >= max(0, coords.count - 3) || (!details.steps.isEmpty && currentStepIndex >= details.steps.count - 1)
-            if distToFinalDest < 25.0 || (isNearEnd && distToFinalDest < 40.0) {
-                routingService.speakTurnInstruction("You have arrived at your destination.", force: true)
-                routeDetails = nil
-                routeCoordinates = nil
-                endNavigation()
-                return
-            }
-        }
-
-        // Keep currentCoordIndex advancing along the polyline smoothly
-        let searchStart = max(0, currentCoordIndex - 5)
-        let searchEnd = min(coords.count - 1, currentCoordIndex + 50)
-        var closestIndex = currentCoordIndex
-        var minSegDist = Double.greatestFiniteMagnitude
-
-        for i in searchStart..<searchEnd {
-            let dist = routingService.distanceToSegmentMeters(p: userCoord, a: coords[i], b: coords[i + 1])
-            if dist < minSegDist {
-                minSegDist = dist
-                closestIndex = i
-            }
-        }
-        if minSegDist < 40.0 {
-            currentCoordIndex = closestIndex
-        }
-
-        // Step progression along maneuvers (includes coordinate index fallback for high-speed travel)
-        if !details.steps.isEmpty && currentStepIndex < details.steps.count {
-            let currentStep = details.steps[currentStepIndex]
-            let endCoord = coords[min(currentStep.endIndex, coords.count - 1)]
-            let distToEndMeters = segmentDistanceMeters(p1: userCoord, p2: endCoord)
-
-            if (distToEndMeters < 35.0 || currentCoordIndex >= currentStep.endIndex) && currentStepIndex < details.steps.count - 1 {
-                currentStepIndex += 1
-                hasAnnouncedAdvanceTurn = false
-                currentCoordIndex = max(currentCoordIndex, currentStep.endIndex)
-                let nextStep = details.steps[currentStepIndex]
-                routingService.speakTurnInstruction(nextStep.instruction, stepId: currentStepIndex * 10 + 2)
-            } else if currentStepIndex < details.steps.count - 1 && !hasAnnouncedAdvanceTurn && distToEndMeters < 250.0 {
-                hasAnnouncedAdvanceTurn = true
-                let nextStep = details.steps[currentStepIndex + 1]
-                let distStr = formatCountdownDistance(distToEndMeters * 0.000621371, useMetric: useMetric)
-                routingService.speakTurnInstruction("In \(distStr), \(nextStep.instruction)", stepId: (currentStepIndex + 1) * 10 + 1)
-            }
-        }
-
-        updateNavigationTelemetry(at: userCoord, coordIndex: currentCoordIndex, in: details)
-    }
-
-    func updateNavigationTelemetry(at userCoord: CLLocationCoordinate2D, coordIndex: Int, in details: RouteDetails) {
-        let coords = details.coordinates
-        guard coords.count >= 2 else { return }
-        let clampedIndex = min(max(0, coordIndex), coords.count - 1)
-
-        // 1. Calculate remaining step distance (monotonically counting down)
-        let currentStep: NavigationStep? = (currentStepIndex < details.steps.count) ? details.steps[currentStepIndex] : details.steps.last
-        if let currentStep = currentStep {
-            let stepEnd = max(0, min(currentStep.endIndex, coords.count - 1))
-            var stepDistMeters = 0.0
-            if clampedIndex < stepEnd && clampedIndex + 1 < coords.count {
-                stepDistMeters += segmentDistanceMeters(p1: userCoord, p2: coords[clampedIndex + 1])
-                if clampedIndex + 1 < stepEnd {
-                    for i in (clampedIndex + 1)..<stepEnd {
-                        if i + 1 < coords.count {
-                            stepDistMeters += segmentDistanceMeters(p1: coords[i], p2: coords[i + 1])
-                        }
-                    }
-                }
-            } else if stepEnd < coords.count {
-                stepDistMeters = segmentDistanceMeters(p1: userCoord, p2: coords[stepEnd])
-            }
-            self.remainingStepDistanceMiles = max(0.0, stepDistMeters * 0.000621371)
-        } else {
-            self.remainingStepDistanceMiles = 0.0
-        }
-
-        // 2. Calculate remaining total route distance (monotonically counting down)
-        var routeDistMeters = 0.0
-        if clampedIndex < coords.count - 1 {
-            routeDistMeters += segmentDistanceMeters(p1: userCoord, p2: coords[clampedIndex + 1])
-            if clampedIndex + 1 < coords.count - 1 {
-                for i in (clampedIndex + 1)..<(coords.count - 1) {
-                    routeDistMeters += segmentDistanceMeters(p1: coords[i], p2: coords[i + 1])
-                }
-            }
-        } else if let last = coords.last {
-            routeDistMeters = segmentDistanceMeters(p1: userCoord, p2: last)
-        }
-        let routeMiles = max(0.0, routeDistMeters * 0.000621371)
-        self.remainingRouteDistanceMiles = routeMiles
-
-        // 3. Proportionally update remaining duration and ETA
-        if details.totalDistanceMiles > 0 {
-            let ratio = max(0.0, min(1.0, routeMiles / details.totalDistanceMiles))
-            self.remainingRouteDurationSeconds = details.totalDurationSeconds * ratio
-        } else {
-            self.remainingRouteDurationSeconds = 0
-        }
-        self.dynamicArrivalDate = Date().addingTimeInterval(self.remainingRouteDurationSeconds)
-    }
-
-    private func segmentDistanceMeters(p1: CLLocationCoordinate2D, p2: CLLocationCoordinate2D) -> Double {
-        let latRad = p1.latitude * .pi / 180.0
-        let dx = (p2.longitude - p1.longitude) * 111320.0 * cos(latRad)
-        let dy = (p2.latitude - p1.latitude) * 110540.0
-        return sqrt(dx * dx + dy * dy)
-    }
-
-    private func recalculateActiveRoute(to dest: CLLocationCoordinate2D) {
-        guard isNavigating && !isRecalculating else { return }
-        isRecalculating = true
-        let start = effectiveUserCoordinate
-        let travelMode = selectedTravelMode
-        let metric = useMetric
-        let reqId = UUID()
-        self.activeRouteRequestId = reqId
-        let router = routingService
-
-        DispatchQueue.global(qos: .userInitiated).async {
-            let details = router.calculateRoute(from: start, to: dest, mode: travelMode, useMetric: metric)
-            DispatchQueue.main.async {
-                defer { self.isRecalculating = false }
-                guard self.isNavigating && self.activeRouteRequestId == reqId else { return }
-                if let details = details, !details.coordinates.isEmpty {
-                    self.consecutiveRerouteFailures = 0
-                    self.routeDetails = details
-                    self.routeCoordinates = details.coordinates
-                    self.currentStepIndex = 0
-                    self.currentCoordIndex = 0
-                    self.hasAnnouncedAdvanceTurn = false
-                    self.remainingRouteDistanceMiles = details.totalDistanceMiles
-                    self.remainingRouteDurationSeconds = details.totalDurationSeconds
-                    self.dynamicArrivalDate = details.targetArrivalDate
-                    if let first = details.steps.first {
-                        self.remainingStepDistanceMiles = first.distanceMiles
-                        self.routingService.speakTurnInstruction(first.instruction, stepId: 0, force: true)
-                    }
-                } else {
-                    self.consecutiveRerouteFailures += 1
-                    if self.consecutiveRerouteFailures == 1 {
-                        self.errorMessage = "Rerouting failed: Current location or destination is outside offline road network."
-                        self.showErrorAlert = true
-                    }
-                }
-            }
-        }
-    }
-
-    private func handleMapLongPress(at coordinate: CLLocationCoordinate2D) {
-        let tempPlace = SearchResult(
-            id: 0,
-            name: String(format: "Dropped Pin (%.4f, %.4f)", coordinate.latitude, coordinate.longitude),
-            lat: coordinate.latitude,
-            lon: coordinate.longitude
-        )
-        selectPlace(tempPlace)
-        let searcher = searchService
-
-        Task.detached(priority: .userInitiated) {
-            if let resolved = await searcher.reverseGeocodeAsync(coordinate: coordinate) {
-                await MainActor.run {
-                    if self.selectedCoordinate?.latitude == coordinate.latitude &&
-                       self.selectedCoordinate?.longitude == coordinate.longitude {
-                        let latRad = coordinate.latitude * .pi / 180.0
-                        let dx = (resolved.lon - coordinate.longitude) * 111320.0 * cos(latRad)
-                        let dy = (resolved.lat - coordinate.latitude) * 110540.0
-                        let distMeters = sqrt(dx * dx + dy * dy)
-                        if distMeters <= 75.0 && resolved.id != 0 {
-                            if self.destinationText != resolved.name {
-                                self.isProgrammaticTextChange = true
-                            }
-                            self.selectedPlace = SearchResult(
-                                id: resolved.id,
-                                name: resolved.name,
-                                lat: coordinate.latitude,
-                                lon: coordinate.longitude
-                            )
-                            self.destinationText = resolved.name
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private func handleQueryChange(_ query: String) {
-        searchTask?.cancel()
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.count >= 2 {
-            appMode = .searchList
-            isSearching = true
-            let userLoc = effectiveUserCoordinate
-            let searcher = searchService
-            searchTask = Task.detached(priority: .userInitiated) {
-                try? await Task.sleep(nanoseconds: 180_000_000)
-                if Task.isCancelled { return }
-                let results = await searcher.searchAsync(query: trimmed, userLocation: userLoc)
-                if !Task.isCancelled {
-                    await MainActor.run {
-                        self.searchResults = results
-                        self.isSearching = false
-                    }
-                }
-            }
-        } else {
-            searchResults = []
-            isSearching = false
-            if appMode == .searchList {
-                appMode = .explore
-            }
-        }
-    }
-
-    func searchCategory(_ category: String) {
-        if destinationText != category {
-            isProgrammaticTextChange = true
-            destinationText = category
-        }
-        handleQueryChange(category)
-    }
-
-    private func selectPlace(_ place: SearchResult) {
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-        if destinationText != place.name {
-            isProgrammaticTextChange = true
-        }
-        selectedPlace = place
-        selectedCoordinate = CLLocationCoordinate2D(latitude: place.lat, longitude: place.lon)
-        destinationText = place.name
-        searchResults = []
-        appMode = .placeDetail
-    }
-
-    private func calculateRouteTo(_ place: SearchResult, completion: (@MainActor @Sendable () -> Void)? = nil) {
-        let dest = CLLocationCoordinate2D(latitude: place.lat, longitude: place.lon)
-        let start = effectiveUserCoordinate
-        let travelMode = selectedTravelMode
-        let metric = useMetric
-        let reqId = UUID()
-        self.activeRouteRequestId = reqId
-        let router = routingService
-
-        appMode = .routePreview
-        routeDetails = nil
-        routeCoordinates = nil
-
-        DispatchQueue.global(qos: .userInitiated).async {
-            let details = router.calculateRoute(from: start, to: dest, mode: travelMode, useMetric: metric)
-            DispatchQueue.main.async {
-                guard self.activeRouteRequestId == reqId else { return }
-                if let details = details, !details.coordinates.isEmpty {
-                    self.routeDetails = details
-                    self.routeCoordinates = details.coordinates
-                    self.remainingRouteDistanceMiles = details.totalDistanceMiles
-                    self.remainingRouteDurationSeconds = details.totalDurationSeconds
-                    self.dynamicArrivalDate = details.targetArrivalDate
-                    if let first = details.steps.first {
-                        self.remainingStepDistanceMiles = first.distanceMiles
-                    }
-                    completion?()
-                } else {
-                    self.errorMessage = "Could not calculate route to \(place.name)."
-                    self.showErrorAlert = true
-                    self.appMode = self.selectedPlace != nil ? .placeDetail : .explore
-                }
-            }
-        }
-    }
-
-    private func switchTravelMode(_ mode: String) {
-        selectedTravelMode = mode
-        if let place = selectedPlace {
-            calculateRouteTo(place)
-        }
-    }
-
-    private func startNavigation() {
-        guard let details = routeDetails, !details.coordinates.isEmpty else { return }
-        isNavigating = true
-        appMode = .navigation
-        currentStepIndex = 0
-        currentCoordIndex = 0
-        hasAnnouncedAdvanceTurn = false
-        remainingRouteDistanceMiles = details.totalDistanceMiles
-        remainingRouteDurationSeconds = details.totalDurationSeconds
-        dynamicArrivalDate = details.targetArrivalDate
-        if let first = details.steps.first {
-            remainingStepDistanceMiles = first.distanceMiles
-        }
-        simulatedUserCoordinate = details.coordinates.first
-        locationManager.setNavigationActive(true)
-
-        if let first = details.steps.first {
-            routingService.speakTurnInstruction(first.instruction)
-        }
-    }
-
-    private func startSimulatedDrive() {
-        guard let details = routeDetails, !details.coordinates.isEmpty else { return }
-        startNavigation()
-        guard isNavigating else { return }
-        isSimulating = true
-        simulatedSpeedMph = selectedTravelMode == "pedestrian" ? 3 : (selectedTravelMode == "bicycle" ? 12 : 45)
-
-        simulationTimer?.invalidate()
-        simulationTimer = Timer.scheduledTimer(withTimeInterval: 0.12, repeats: true) { _ in
-            Task { @MainActor in
-                advanceSimulationStep()
-            }
-        }
-    }
-
-    func advanceSimulationStep() {
-        guard let details = routeDetails, !details.coordinates.isEmpty else { return }
-        let coords = details.coordinates
-        guard currentCoordIndex < coords.count - 1 else {
-            routingService.speakTurnInstruction("You have arrived at your destination.", force: true)
-            routeDetails = nil
-            routeCoordinates = nil
-            endNavigation()
-            return
-        }
-
-        let stepJump = Int(max(1, simulationSpeedMultiplier))
-        let nextIndex = min(coords.count - 1, currentCoordIndex + stepJump)
-
-        let p1 = coords[currentCoordIndex]
-        let p2 = coords[nextIndex]
-
-        let dLon = (p2.longitude - p1.longitude) * .pi / 180
-        let lat1 = p1.latitude * .pi / 180
-        let lat2 = p2.latitude * .pi / 180
-        let y = sin(dLon) * cos(lat2)
-        let x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon)
-        let radiansBearing = atan2(y, x)
-        let degreesBearing = (radiansBearing * 180 / .pi + 360).truncatingRemainder(dividingBy: 360)
-
-        simulatedHeading = degreesBearing
-        simulatedUserCoordinate = p2
-        currentCoordIndex = nextIndex
-
-        if !details.steps.isEmpty && currentStepIndex < details.steps.count - 1 {
-            let nextStep = details.steps[currentStepIndex + 1]
-            if currentCoordIndex >= nextStep.startIndex {
-                currentStepIndex += 1
-                hasAnnouncedAdvanceTurn = false
-                routingService.speakTurnInstruction(nextStep.instruction, stepId: currentStepIndex * 10 + 2)
-            } else if !hasAnnouncedAdvanceTurn {
-                let turnCoord = coords[max(0, min(nextStep.startIndex, coords.count - 1))]
-                let distToTurn = segmentDistanceMeters(p1: p2, p2: turnCoord)
-                if distToTurn < 250.0 {
-                    hasAnnouncedAdvanceTurn = true
-                    let distStr = formatCountdownDistance(distToTurn * 0.000621371, useMetric: useMetric)
-                    routingService.speakTurnInstruction("In \(distStr), \(nextStep.instruction)", stepId: (currentStepIndex + 1) * 10 + 1)
-                }
-            }
-        }
-
-        updateNavigationTelemetry(at: p2, coordIndex: nextIndex, in: details)
-    }
-
-    private func endNavigation() {
-        activeRouteRequestId = nil
-        isRecalculating = false
-        consecutiveRerouteFailures = 0
-        routingService.stopVoice()
-        simulationTimer?.invalidate()
-        simulationTimer = nil
-        isNavigating = false
-        isSimulating = false
-        isHudMode = false
-        simulatedUserCoordinate = nil
-        simulatedHeading = nil
-        simulatedSpeedMph = 0
-        currentStepIndex = 0
-        currentCoordIndex = 0
-        locationManager.setNavigationActive(false)
-        appMode = routeDetails != nil ? .routePreview : .explore
-    }
-
-    func dismissSearch() {
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-        searchTask?.cancel()
-        searchTask = nil
-        isSearching = false
-        searchResults = []
-        if appMode == .searchList {
-            appMode = .explore
-        }
-    }
-
-    func clearSearch() {
-        searchTask?.cancel()
-        searchTask = nil
-        isSearching = false
-        destinationText = ""
-        searchResults = []
-        dismissSearch()
-    }
-
-    func resetToExplore() {
-        endNavigation()
-        searchTask?.cancel()
-        searchTask = nil
-        isSearching = false
-        destinationText = ""
-        searchResults = []
-        selectedPlace = nil
-        selectedCoordinate = nil
-        routeCoordinates = nil
-        routeDetails = nil
-        appMode = .explore
-    }
-
-    private func recenterOnUser() {
-        if let user = locationManager.location?.coordinate, isWithinSupportedRegion(user) {
-            userLocationCenter = user
-        } else {
-            userLocationCenter = ContentView.defaultAlaskaCoordinate
         }
     }
 }
@@ -1523,7 +1180,9 @@ struct NavigationStepsSheet: View {
                 }
             }
             .navigationTitle("Directions")
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }
@@ -1553,4 +1212,3 @@ struct DashboardGauge: View {
         .shadow(color: Color.black.opacity(0.12), radius: 3)
     }
 }
-

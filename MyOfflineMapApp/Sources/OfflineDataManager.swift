@@ -49,15 +49,36 @@ public struct OfflineDataManager {
             var mutableURL = appSupportURL
             try? mutableURL.setResourceValues(resourceValues)
         }
-        // Exclude Documents directory from iCloud backup to avoid backing up multi-gigabyte offline data
+        // Ensure Documents directory root is NOT excluded from backup (Apple Review Guideline 5.1.1)
         if let docsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
             try? FileManager.default.createDirectory(at: docsURL, withIntermediateDirectories: true)
-            var resourceValues = URLResourceValues()
-            resourceValues.isExcludedFromBackup = true
-            var mutableURL = docsURL
-            try? mutableURL.setResourceValues(resourceValues)
+            var rootValues = URLResourceValues()
+            rootValues.isExcludedFromBackup = false
+            var mutableDocsURL = docsURL
+            try? mutableDocsURL.setResourceValues(rootValues)
+
+            // Restrict backup exclusion specifically to downloaded offline map asset files (.pmtiles, .tar, .db, .json)
+            excludeOfflineAssetsInDocuments(docsURL: docsURL)
         }
         print("OfflineDataManager initialized with backup exclusion configured.")
+    }
+
+    private static let offlineAssetExtensions = [".pmtiles", ".tar", ".db", ".json"]
+
+    /// Restricts iCloud backup exclusion strictly to offline map asset files within Documents
+    public static func excludeOfflineAssetsInDocuments(docsURL: URL) {
+        guard let contents = try? FileManager.default.contentsOfDirectory(at: docsURL, includingPropertiesForKeys: nil) else {
+            return
+        }
+        for fileURL in contents {
+            let lower = fileURL.lastPathComponent.lowercased()
+            if offlineAssetExtensions.contains(where: { lower.hasSuffix($0) }) {
+                var resourceValues = URLResourceValues()
+                resourceValues.isExcludedFromBackup = true
+                var mutableFileURL = fileURL
+                try? mutableFileURL.setResourceValues(resourceValues)
+            }
+        }
     }
 
     /// Resolves the URL for an offline data asset across external storage, Application Support, Documents, and App Bundle

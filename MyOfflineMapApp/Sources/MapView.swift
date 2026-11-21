@@ -93,19 +93,29 @@ public struct MapView: UIViewRepresentable {
 
         // Recenter on user if requested
         if let userCoord = userLocationCenter {
-            uiView.setCenter(userCoord, zoomLevel: 15, animated: true)
-            DispatchQueue.main.async {
-                self.userLocationCenter = nil
+            if !coordinator.isRecenterConsumed {
+                coordinator.isRecenterConsumed = true
+                uiView.setCenter(userCoord, zoomLevel: 15, animated: true)
+                DispatchQueue.main.async {
+                    self.userLocationCenter = nil
+                }
             }
+        } else {
+            coordinator.isRecenterConsumed = false
         }
 
         // Zoom in / out control
         if let step = zoomStep {
-            let targetZoom = max(uiView.minimumZoomLevel, min(uiView.maximumZoomLevel, uiView.zoomLevel + step))
-            uiView.setZoomLevel(targetZoom, animated: true)
-            DispatchQueue.main.async {
-                self.zoomStep = nil
+            if !coordinator.isZoomStepConsumed {
+                coordinator.isZoomStepConsumed = true
+                let targetZoom = max(uiView.minimumZoomLevel, min(uiView.maximumZoomLevel, uiView.zoomLevel + step))
+                uiView.setZoomLevel(targetZoom, animated: true)
+                DispatchQueue.main.async {
+                    self.zoomStep = nil
+                }
             }
+        } else {
+            coordinator.isZoomStepConsumed = false
         }
 
         // Destination Pin
@@ -130,21 +140,19 @@ public struct MapView: UIViewRepresentable {
             coordinator.removeDestinationAnnotation(from: uiView)
         }
 
-        // Route Polyline (Robust deep comparison)
+        // Route Polyline (Complete O(N) coordinate equality check)
         if let route = routeCoordinates {
             let hasChanged: Bool = {
                 guard let last = coordinator.lastRouteCoordinates else { return true }
                 if last.count != route.count { return true }
-                guard let f1 = last.first, let f2 = route.first,
-                      let l1 = last.last, let l2 = route.last else { return true }
-                if abs(f1.latitude - f2.latitude) > 0.00001 || abs(f1.longitude - f2.longitude) > 0.00001 ||
-                   abs(l1.latitude - l2.latitude) > 0.00001 || abs(l1.longitude - l2.longitude) > 0.00001 {
-                    return true
+                for i in 0..<route.count {
+                    let c1 = last[i]
+                    let c2 = route[i]
+                    if abs(c1.latitude - c2.latitude) > 0.00001 || abs(c1.longitude - c2.longitude) > 0.00001 {
+                        return true
+                    }
                 }
-                let mid = route.count / 2
-                let m1 = last[mid]
-                let m2 = route[mid]
-                return abs(m1.latitude - m2.latitude) > 0.00001 || abs(m1.longitude - m2.longitude) > 0.00001
+                return false
             }()
 
             if hasChanged {
@@ -181,6 +189,8 @@ public struct MapView: UIViewRepresentable {
     public class Coordinator: NSObject, @preconcurrency MLNMapViewDelegate {
         var parent: MapView
         var isStyleLoaded = false
+        public var isRecenterConsumed: Bool = false
+        public var isZoomStepConsumed: Bool = false
         var pendingRoute: [CLLocationCoordinate2D]?
         var lastSelectedCoordinate: CLLocationCoordinate2D?
         var lastDestinationTitle: String?
@@ -319,8 +329,8 @@ public struct MapView: UIViewRepresentable {
                 let car = MLNPointAnnotation()
                 car.coordinate = coordinate
                 car.title = "Current Position"
-                mapView.addAnnotation(car)
                 carAnnotation = car
+                mapView.addAnnotation(car)
             }
         }
 
@@ -382,6 +392,36 @@ public struct MapView: UIViewRepresentable {
             if let source = style.source(withIdentifier: "route-source") {
                 style.removeSource(source)
             }
+        }
+
+        public func mapView(_ mapView: MLNMapView, imageFor annotation: MLNAnnotation) -> MLNAnnotationImage? {
+            if annotation === carAnnotation || annotation.title == "Current Position" {
+                let identifier = "navigation-vehicle-arrow"
+                if let existing = mapView.dequeueReusableAnnotationImage(withIdentifier: identifier) {
+                    return existing
+                }
+                let renderer = UIGraphicsImageRenderer(size: CGSize(width: 40, height: 40))
+                let image = renderer.image { ctx in
+                    let cgCtx = ctx.cgContext
+                    // Outer white circular ring
+                    cgCtx.setFillColor(UIColor.white.cgColor)
+                    cgCtx.fillEllipse(in: CGRect(x: 4, y: 4, width: 32, height: 32))
+                    // Inner navigation blue circular puck
+                    cgCtx.setFillColor(UIColor(red: 0.10, green: 0.45, blue: 0.91, alpha: 1.0).cgColor)
+                    cgCtx.fillEllipse(in: CGRect(x: 6, y: 6, width: 28, height: 28))
+                    // White forward directional navigation chevron / arrow pointing North
+                    let path = UIBezierPath()
+                    path.move(to: CGPoint(x: 20, y: 11))
+                    path.addLine(to: CGPoint(x: 27, y: 25))
+                    path.addLine(to: CGPoint(x: 20, y: 22))
+                    path.addLine(to: CGPoint(x: 13, y: 25))
+                    path.close()
+                    UIColor.white.setFill()
+                    path.fill()
+                }
+                return MLNAnnotationImage(image: image, reuseIdentifier: identifier)
+            }
+            return nil
         }
 
         public func mapView(_ mapView: MLNMapView, strokeColorForShapeAnnotation annotation: MLNShape) -> UIColor {

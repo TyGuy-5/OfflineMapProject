@@ -45,8 +45,12 @@ public final class LocationManager: NSObject, ObservableObject, CLLocationManage
         if let observer = orientationObserver {
             NotificationCenter.default.removeObserver(observer)
         }
-        Task { @MainActor in
+        if Thread.isMainThread {
             UIDevice.current.endGeneratingDeviceOrientationNotifications()
+        } else {
+            DispatchQueue.main.async {
+                UIDevice.current.endGeneratingDeviceOrientationNotifications()
+            }
         }
     }
 
@@ -95,6 +99,10 @@ public final class LocationManager: NSObject, ObservableObject, CLLocationManage
         if latest.horizontalAccuracy < 0 || latest.horizontalAccuracy >= 65.0 {
             Task { @MainActor in
                 self.isGpsSignalLow = true
+                self.smoothedSpeedMph = 0
+                self.smoothedSpeedKmh = 0
+                self.isStationary = true
+                self.previousSpeedMps = 0.0
             }
             return
         }
@@ -173,8 +181,19 @@ public final class LocationManager: NSObject, ObservableObject, CLLocationManage
 
     public nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         print("LocationManager didFailWithError: \(error.localizedDescription)")
+        if let clError = error as? CLError, clError.code == .locationUnknown {
+            return
+        }
+        let nsError = error as NSError
+        if nsError.domain == kCLErrorDomain && nsError.code == CLError.locationUnknown.rawValue {
+            return
+        }
         Task { @MainActor in
             self.isGpsSignalLow = true
+            self.smoothedSpeedMph = 0
+            self.smoothedSpeedKmh = 0
+            self.isStationary = true
+            self.previousSpeedMps = 0.0
         }
     }
 }
