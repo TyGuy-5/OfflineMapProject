@@ -26,6 +26,23 @@
 		DDC463558DD7F23B558EADA5 /* MapLibre in Frameworks */ = {isa = PBXBuildFile; productRef = 86E98EC3D5984F96263D8C08 /* MapLibre */; };
 		F9A814DC7EBED70C4FD2FCC2 /* valhalla.json in Resources */ = {isa = PBXBuildFile; fileRef = 3636A0804871279E5E42232D /* valhalla.json */; };
 		FE2B65D4BD569E3144DB115C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F786A07CFD41403368A3F6B6 /* ContentView.swift */; };
+		M2BF0001 /* GeoJSONConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = M2FR0001 /* GeoJSONConverter.swift */; };
+		M2BF0002 /* RegionalTrailDownloader.swift in Sources */ = {isa = PBXBuildFile; fileRef = M2FR0002 /* RegionalTrailDownloader.swift */; };
+		M2BF0003 /* TrailOverlayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = M2FR0003 /* TrailOverlayManager.swift */; };
+		M2BF0004 /* RegionalTrailsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = M2FR0004 /* RegionalTrailsSheet.swift */; };
+		M2BF0005 /* TrailDownloaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = M2FR0005 /* TrailDownloaderTests.swift */; };
+		M1BF0001 /* RouteEndpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1FR0001 /* RouteEndpoint.swift */; };
+		M1BF0002 /* RoutePreviewHUD.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1FR0002 /* RoutePreviewHUD.swift */; };
+		M1BF0003 /* DirectionsBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1FR0003 /* DirectionsBarView.swift */; };
+		M1BF0004 /* RoutePlanningTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1FR0004 /* RoutePlanningTests.swift */; };
+		E2EBF001 /* MockURLProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2EFR001 /* MockURLProtocol.swift */; };
+		E2EBF002 /* MockAudioAlertSpy.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2EFR002 /* MockAudioAlertSpy.swift */; };
+		E2EBF003 /* LocationSequenceBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2EFR003 /* LocationSequenceBuilder.swift */; };
+		E2EBF004 /* TrailTestFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2EFR004 /* TrailTestFixtures.swift */; };
+		E2EBF005 /* Tier1_FeatureCoverageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2EFR005 /* Tier1_FeatureCoverageTests.swift */; };
+		E2EBF006 /* Tier2_BoundaryCornerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2EFR006 /* Tier2_BoundaryCornerTests.swift */; };
+		E2EBF007 /* Tier3_CrossFeatureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2EFR007 /* Tier3_CrossFeatureTests.swift */; };
+		E2EBF008 /* Tier4_RealWorldWorkloadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2EFR008 /* Tier4_RealWorldWorkloadTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -56,6 +73,23 @@
 		E73B6400BE26C024B3A94B1B /* MyOfflineMapApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyOfflineMapApp.swift; sourceTree = "<group>"; };
 		F2D63B995C4023B1448740A9 /* MyOfflineMapApp.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = MyOfflineMapApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F786A07CFD41403368A3F6B6 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		M2FR0001 /* GeoJSONConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/GeoJSONConverter.swift; sourceTree = "<group>"; };
+		M2FR0002 /* RegionalTrailDownloader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/RegionalTrailDownloader.swift; sourceTree = "<group>"; };
+		M2FR0003 /* TrailOverlayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/TrailOverlayManager.swift; sourceTree = "<group>"; };
+		M2FR0004 /* RegionalTrailsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/RegionalTrailsSheet.swift; sourceTree = "<group>"; };
+		M2FR0005 /* TrailDownloaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrailDownloaderTests.swift; sourceTree = "<group>"; };
+		M1FR0001 /* RouteEndpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/RouteEndpoint.swift; sourceTree = "<group>"; };
+		M1FR0002 /* RoutePreviewHUD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/RoutePreviewHUD.swift; sourceTree = "<group>"; };
+		M1FR0003 /* DirectionsBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/DirectionsBarView.swift; sourceTree = "<group>"; };
+		M1FR0004 /* RoutePlanningTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePlanningTests.swift; sourceTree = "<group>"; };
+		E2EFR001 /* MockURLProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = E2E/Harness/MockURLProtocol.swift; sourceTree = "<group>"; };
+		E2EFR002 /* MockAudioAlertSpy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = E2E/Harness/MockAudioAlertSpy.swift; sourceTree = "<group>"; };
+		E2EFR003 /* LocationSequenceBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = E2E/Harness/LocationSequenceBuilder.swift; sourceTree = "<group>"; };
+		E2EFR004 /* TrailTestFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = E2E/Harness/TrailTestFixtures.swift; sourceTree = "<group>"; };
+		E2EFR005 /* Tier1_FeatureCoverageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = E2E/Tiers/Tier1_FeatureCoverageTests.swift; sourceTree = "<group>"; };
+		E2EFR006 /* Tier2_BoundaryCornerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = E2E/Tiers/Tier2_BoundaryCornerTests.swift; sourceTree = "<group>"; };
+		E2EFR007 /* Tier3_CrossFeatureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = E2E/Tiers/Tier3_CrossFeatureTests.swift; sourceTree = "<group>"; };
+		E2EFR008 /* Tier4_RealWorldWorkloadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = E2E/Tiers/Tier4_RealWorldWorkloadTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -87,6 +121,16 @@
 			children = (
 				DB00E630BBAC19EC3EE7B49C /* MyOfflineMapAppTests.swift */,
 				22AF1F83F8468EDA4EA0B062 /* RemediationTests.swift */,
+				M2FR0005 /* TrailDownloaderTests.swift */,
+				M1FR0004 /* RoutePlanningTests.swift */,
+				E2EFR001 /* MockURLProtocol.swift */,
+				E2EFR002 /* MockAudioAlertSpy.swift */,
+				E2EFR003 /* LocationSequenceBuilder.swift */,
+				E2EFR004 /* TrailTestFixtures.swift */,
+				E2EFR005 /* Tier1_FeatureCoverageTests.swift */,
+				E2EFR006 /* Tier2_BoundaryCornerTests.swift */,
+				E2EFR007 /* Tier3_CrossFeatureTests.swift */,
+				E2EFR008 /* Tier4_RealWorldWorkloadTests.swift */,
 			);
 			name = MyOfflineMapAppTests;
 			path = Tests/MyOfflineMapAppTests;
@@ -113,6 +157,13 @@
 				1805091007FB4DC4E1C3AD36 /* OfflineDataManager.swift */,
 				20EA830837D02B303BC7AAB0 /* RoutingService.swift */,
 				C5410B8020863F00899978A0 /* SearchService.swift */,
+				M2FR0001 /* GeoJSONConverter.swift */,
+				M2FR0002 /* RegionalTrailDownloader.swift */,
+				M2FR0003 /* TrailOverlayManager.swift */,
+				M2FR0004 /* RegionalTrailsSheet.swift */,
+				M1FR0001 /* RouteEndpoint.swift */,
+				M1FR0002 /* RoutePreviewHUD.swift */,
+				M1FR0003 /* DirectionsBarView.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -244,6 +295,13 @@
 				3D04CF037DA1F52D649FC8DC /* OfflineDataManager.swift in Sources */,
 				C63EB958E98FF723F2C61DD6 /* RoutingService.swift in Sources */,
 				227D6C3FB9CBF6541AB99CBD /* SearchService.swift in Sources */,
+				M2BF0001 /* GeoJSONConverter.swift in Sources */,
+				M2BF0002 /* RegionalTrailDownloader.swift in Sources */,
+				M2BF0003 /* TrailOverlayManager.swift in Sources */,
+				M2BF0004 /* RegionalTrailsSheet.swift in Sources */,
+				M1BF0001 /* RouteEndpoint.swift in Sources */,
+				M1BF0002 /* RoutePreviewHUD.swift in Sources */,
+				M1BF0003 /* DirectionsBarView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -253,6 +311,16 @@
 			files = (
 				64D453D025D733B298A3C7A9 /* MyOfflineMapAppTests.swift in Sources */,
 				5F13620587CDA7807A9A21EE /* RemediationTests.swift in Sources */,
+				M2BF0005 /* TrailDownloaderTests.swift in Sources */,
+				M1BF0004 /* RoutePlanningTests.swift in Sources */,
+				E2EBF001 /* MockURLProtocol.swift in Sources */,
+				E2EBF002 /* MockAudioAlertSpy.swift in Sources */,
+				E2EBF003 /* LocationSequenceBuilder.swift in Sources */,
+				E2EBF004 /* TrailTestFixtures.swift in Sources */,
+				E2EBF005 /* Tier1_FeatureCoverageTests.swift in Sources */,
+				E2EBF006 /* Tier2_BoundaryCornerTests.swift in Sources */,
+				E2EBF007 /* Tier3_CrossFeatureTests.swift in Sources */,
+				E2EBF008 /* Tier4_RealWorldWorkloadTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
